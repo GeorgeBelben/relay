@@ -2,7 +2,10 @@ use std::process::{ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Serialize;
+use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::Command;
+
+use crate::db::time::now_unix;
 
 // Pushed to the frontend as the emulator process starts, runs, and exits. "launching" covers the
 // spawn call itself; "running" fires once the OS confirms the process actually started (spawn()
@@ -24,6 +27,34 @@ pub enum LauncherStatus {
     Exited,
     Crashed { exit_code: Option<i32>, signal: Option<i32> },
     Error { message: String },
+}
+
+// The MVP never captured this at all (`spawn(command, args, { stdio: "ignore" })`) -- a RetroArch
+// core-load failure or similar just vanished. Kept as discrete, sourced, timestamped lines
+// (rather than raw undifferentiated bytes) so a caller can log/display them meaningfully; this
+// deliberately doesn't try to pattern-match specific failure strings (e.g. a particular core's
+// "failed to load" wording) since that's fragile and unverified without a real RetroArch install
+// to check the actual text against -- "surfacing" a core-load failure here means the operator can
+// now *see* it at all, not that it's classified automatically.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LogStream {
+    Stdout,
+    Stderr,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct LogLine {
+    pub stream: LogStream,
+    pub line: String,
+    pub timestamp: i64,
+}
+
+async fn pump_lines<R: AsyncRead + Unpin>(reader: R, stream: LogStream, on_log: &impl Fn(LogLine)) {
+    let mut lines = BufReader::new(reader).lines();
+    while let Ok(Some(line)) = lines.next_line().await {
+        on_log(LogLine { stream, line, timestamp: now_unix() });
+    }
 }
 
 #[cfg(unix)]
@@ -56,19 +87,20 @@ impl std::fmt::Display for LaunchError {
 
 impl std::error::Error for LaunchError {}
 
-/// Baseline emulator launch: spawn `command`/`args` via `tokio::process`, capture the exit code
-/// once it quits. Only one launch may be in flight at a time -- unlike
-/// `ingestion::pipeline::rescan`'s overlap guard (which silently no-ops a duplicate call),
-/// `running` here returns `Err(AlreadyRunning)` instead, since the caller (the "Launch" button)
-/// needs to know the request was rejected, matching the MVP's `throw new Error("A game is
-/// already running")`. Ported from `launcher.service.ts#launchGame`'s baseline spawn/exit
-/// handling -- minus RetroAchievements config injection (no RA integration exists in this
-/// rewrite yet) and minus stdout/stderr capture (REL-89).
+/// Baseline emulator launch: spawn `command`/`args` via `tokio::process`, capture stdout/stderr
+/// as structured log lines and the exit code once it quits. Only one launch may be in flight at a
+/// time -- unlike `ingestion::pipeline::rescan`'s overlap guard (which silently no-ops a
+/// duplicate call), `running` here returns `Err(AlreadyRunning)` instead, since the caller (the
+/// "Launch" button) needs to know the request was rejected, matching the MVP's `throw new
+/// Error("A game is already running")`. Ported from `launcher.service.ts#launchGame`'s baseline
+/// spawn/exit handling -- minus RetroAchievements config injection (no RA integration exists in
+/// this rewrite yet).
 pub async fn launch(
     command: &str,
     args: &[String],
     running: &AtomicBool,
     mut on_status: impl FnMut(LauncherStatus),
+    on_log: impl Fn(LogLine),
 ) -> Result<ExitStatus, LaunchError> {
     if running.swap(true, Ordering::SeqCst) {
         return Err(LaunchError::AlreadyRunning);
@@ -79,8 +111,8 @@ pub async fn launch(
     let spawned = Command::new(command)
         .args(args)
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn();
 
     let mut child = match spawned {
@@ -94,7 +126,14 @@ pub async fn launch(
 
     on_status(LauncherStatus::Running);
 
-    let result = child.wait().await;
+    let stdout = child.stdout.take().expect("stdout was piped");
+    let stderr = child.stderr.take().expect("stderr was piped");
+
+    let (_, _, result) = tokio::join!(
+        pump_lines(stdout, LogStream::Stdout, &on_log),
+        pump_lines(stderr, LogStream::Stderr, &on_log),
+        child.wait(),
+    );
     running.store(false, Ordering::SeqCst);
 
     match result {
@@ -130,6 +169,7 @@ mod tests {
             &["-c".to_string(), "exit 0".to_string()],
             &running,
             |s| statuses.push(s),
+            |_| {},
         )
         .await
         .unwrap();
@@ -149,6 +189,7 @@ mod tests {
             &["-c".to_string(), "exit 42".to_string()],
             &running,
             |s| statuses.push(s),
+            |_| {},
         )
         .await
         .unwrap();
@@ -170,7 +211,7 @@ mod tests {
         let mut statuses = Vec::new();
 
         // Sends SIGKILL to itself -- deterministic, no real crash needed to prove the plumbing.
-        launch("sh", &["-c".to_string(), "kill -9 $$".to_string()], &running, |s| statuses.push(s))
+        launch("sh", &["-c".to_string(), "kill -9 $$".to_string()], &running, |s| statuses.push(s), |_| {})
             .await
             .unwrap();
 
@@ -183,7 +224,7 @@ mod tests {
         let running = AtomicBool::new(true); // simulate an in-flight launch
         let mut statuses = Vec::new();
 
-        let err = launch("sh", &["-c".to_string(), "exit 0".to_string()], &running, |s| statuses.push(s))
+        let err = launch("sh", &["-c".to_string(), "exit 0".to_string()], &running, |s| statuses.push(s), |_| {})
             .await
             .unwrap_err();
 
@@ -197,12 +238,35 @@ mod tests {
         let running = AtomicBool::new(false);
         let mut statuses = Vec::new();
 
-        let err = launch("definitely-not-a-real-binary-xyz", &[], &running, |s| statuses.push(s)).await.unwrap_err();
+        let err = launch("definitely-not-a-real-binary-xyz", &[], &running, |s| statuses.push(s), |_| {}).await.unwrap_err();
 
         assert!(matches!(err, LaunchError::Spawn(_)));
         assert_eq!(statuses.len(), 2);
         assert_eq!(statuses[0], LauncherStatus::Launching);
         assert!(matches!(&statuses[1], LauncherStatus::Error { .. }));
         assert!(!running.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn captures_stdout_and_stderr_as_structured_log_lines() {
+        use std::sync::Mutex;
+
+        let running = AtomicBool::new(false);
+        let logs = Mutex::new(Vec::new());
+
+        launch(
+            "sh",
+            &["-c".to_string(), "echo out-line; echo err-line >&2".to_string()],
+            &running,
+            |_| {},
+            |line| logs.lock().unwrap().push(line),
+        )
+        .await
+        .unwrap();
+
+        let logs = logs.into_inner().unwrap();
+        assert_eq!(logs.len(), 2);
+        assert!(logs.iter().any(|l| l.stream == LogStream::Stdout && l.line == "out-line"));
+        assert!(logs.iter().any(|l| l.stream == LogStream::Stderr && l.line == "err-line"));
     }
 }
