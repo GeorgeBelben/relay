@@ -8,9 +8,11 @@ use sqlx::SqlitePool;
 use crate::db::{games, roms, systems};
 
 use super::enrich;
+use super::identify::no_intro::NoIntroDatLookup;
 use super::identify::steamgriddb::SteamGridDbClient;
 use super::probe;
 use super::scan::{self, ScanTarget};
+use super::title::title_from_filename;
 
 // Mirrors the Electron MVP's shared/types.ts#ScanStatus exactly (field names included, via
 // serde's internal tagging + kebab-case rename) so the frontend event contract is unchanged.
@@ -68,7 +70,7 @@ async fn upsert_rom_and_game(
 /// folder, hashes what it finds, and upserts roms/games. Anything not found this pass is marked
 /// missing, not deleted. Ported from the Electron MVP's `scanLibrary.ts` (its dev-seed branch is
 /// deliberately not ported -- that's a dev-only convenience, not a pipeline concern).
-pub async fn scan_and_probe(pool: &SqlitePool, roms_root: &Path) -> Result<usize, sqlx::Error> {
+pub async fn scan_and_probe(pool: &SqlitePool, roms_root: &Path, no_intro: &NoIntroDatLookup) -> Result<usize, sqlx::Error> {
     let all_systems = systems::list(pool).await?;
     let mut found_paths = Vec::new();
 
@@ -86,6 +88,17 @@ pub async fn scan_and_probe(pool: &SqlitePool, roms_root: &Path) -> Result<usize
                     let (crc32, size_bytes) = match probe::probe_file(&file_path).await {
                         Ok(p) => (Some(p.crc32), Some(p.size_bytes)),
                         Err(_) => (None, None),
+                    };
+
+                    // An exact CRC32 match against No-Intro's own data beats guessing a title
+                    // from whatever the filename happens to look like -- falls back to the
+                    // filename-derived title exactly as before on any miss.
+                    let title = match &crc32 {
+                        Some(crc) => match no_intro.lookup(&system.id, crc).await {
+                            Some(dat_title) => title_from_filename(&dat_title),
+                            None => title,
+                        },
+                        None => title,
                     };
 
                     upsert_rom_and_game(pool, &system.id, relative, crc32, size_bytes, None, &title).await?;
@@ -126,12 +139,15 @@ pub async fn scan_and_probe(pool: &SqlitePool, roms_root: &Path) -> Result<usize
 /// runs in different tests never see each other's state). `steamgriddb` is `None` when no API
 /// key is configured yet, which skips enrichment entirely (matching the MVP's behavior) --
 /// taking an already-constructed client (rather than building one from a key internally) is what
-/// lets tests point it at a mock server instead of the real API. `on_status` is called with each
-/// state transition -- production wires it to a Tauri event emit; tests just collect it.
+/// lets tests point it at a mock server instead of the real API; `no_intro` follows the same
+/// pattern for scan-time title correction. `on_status` is called with each state transition --
+/// production wires it to a Tauri event emit; tests just collect it.
+#[allow(clippy::too_many_arguments)]
 pub async fn rescan(
     pool: &SqlitePool,
     roms_root: &Path,
     media_root: &Path,
+    no_intro: &NoIntroDatLookup,
     steamgriddb: Option<&SteamGridDbClient>,
     running: &AtomicBool,
     mut on_status: impl FnMut(ScanStatus),
@@ -139,7 +155,7 @@ pub async fn rescan(
     if running.swap(true, Ordering::SeqCst) {
         return Ok(());
     }
-    let result = run_rescan(pool, roms_root, media_root, steamgriddb, &mut on_status).await;
+    let result = run_rescan(pool, roms_root, media_root, no_intro, steamgriddb, &mut on_status).await;
     running.store(false, Ordering::SeqCst);
 
     if let Err(e) = &result {
@@ -148,15 +164,17 @@ pub async fn rescan(
     result
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_rescan(
     pool: &SqlitePool,
     roms_root: &Path,
     media_root: &Path,
+    no_intro: &NoIntroDatLookup,
     steamgriddb: Option<&SteamGridDbClient>,
     on_status: &mut impl FnMut(ScanStatus),
 ) -> Result<(), PipelineError> {
     on_status(ScanStatus::ScanningFiles);
-    scan_and_probe(pool, roms_root).await?;
+    scan_and_probe(pool, roms_root, no_intro).await?;
 
     if let Some(client) = steamgriddb {
         let http = reqwest::Client::new();
@@ -194,6 +212,13 @@ mod tests {
         (pool, dir)
     }
 
+    // Points at an unreachable address (nothing listens on 127.0.0.1:1) so a lookup fails fast
+    // with no real network call and no cache file -- these tests don't care about DAT lookup
+    // behavior (that's no_intro.rs's job), just that titles stay filename-derived without it.
+    fn no_intro_stub() -> NoIntroDatLookup {
+        NoIntroDatLookup::with_base_url(tempfile::tempdir().unwrap().keep(), "http://127.0.0.1:1/")
+    }
+
     async fn seed_snes(pool: &SqlitePool) {
         systems::create(
             pool,
@@ -218,8 +243,9 @@ mod tests {
         let snes_dir = roms_root.path().join("snes");
         fs::create_dir(&snes_dir).unwrap();
         fs::write(snes_dir.join("Chrono Trigger (USA).sfc"), b"fake-rom-bytes").unwrap();
+        let no_intro = no_intro_stub();
 
-        let found = scan_and_probe(&pool, roms_root.path()).await.unwrap();
+        let found = scan_and_probe(&pool, roms_root.path(), &no_intro).await.unwrap();
         assert_eq!(found, 1);
 
         let all_roms = roms::list(&pool).await.unwrap();
@@ -233,7 +259,7 @@ mod tests {
 
         // Rescanning after the file's gone marks the rom missing rather than deleting it.
         fs::remove_file(snes_dir.join("Chrono Trigger (USA).sfc")).unwrap();
-        let found_again = scan_and_probe(&pool, roms_root.path()).await.unwrap();
+        let found_again = scan_and_probe(&pool, roms_root.path(), &no_intro).await.unwrap();
         assert_eq!(found_again, 0);
 
         let all_roms = roms::list(&pool).await.unwrap();
@@ -250,9 +276,12 @@ mod tests {
         fs::write(roms_root.path().join("snes/game.sfc"), b"data").unwrap();
         let media_root = tempfile::tempdir().unwrap();
 
+        let no_intro = no_intro_stub();
         let mut statuses = Vec::new();
         let running = AtomicBool::new(false);
-        rescan(&pool, roms_root.path(), media_root.path(), None, &running, |s| statuses.push(s)).await.unwrap();
+        rescan(&pool, roms_root.path(), media_root.path(), &no_intro, None, &running, |s| statuses.push(s))
+            .await
+            .unwrap();
 
         assert_eq!(statuses, vec![ScanStatus::ScanningFiles, ScanStatus::Done]);
 
@@ -286,9 +315,10 @@ mod tests {
             .await;
 
         let client = SteamGridDbClient::with_base_url("test-key", &format!("{}/api/v2", server.uri()));
+        let no_intro = no_intro_stub();
         let mut statuses = Vec::new();
         let running = AtomicBool::new(false);
-        rescan(&pool, roms_root.path(), media_root.path(), Some(&client), &running, |s| statuses.push(s))
+        rescan(&pool, roms_root.path(), media_root.path(), &no_intro, Some(&client), &running, |s| statuses.push(s))
             .await
             .unwrap();
 
@@ -311,9 +341,12 @@ mod tests {
         fs::write(roms_root.path().join("snes/game.sfc"), b"data").unwrap();
         let media_root = tempfile::tempdir().unwrap();
 
+        let no_intro = no_intro_stub();
         let running = AtomicBool::new(true); // simulate an in-flight run
         let mut statuses = Vec::new();
-        rescan(&pool, roms_root.path(), media_root.path(), None, &running, |s| statuses.push(s)).await.unwrap();
+        rescan(&pool, roms_root.path(), media_root.path(), &no_intro, None, &running, |s| statuses.push(s))
+            .await
+            .unwrap();
 
         assert!(statuses.is_empty());
         assert!(games::list(&pool).await.unwrap().is_empty());

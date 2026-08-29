@@ -3,9 +3,10 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use sqlx::SqlitePool;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::db::settings;
+use crate::ingestion::identify::no_intro::NoIntroDatLookup;
 use crate::ingestion::identify::steamgriddb::SteamGridDbClient;
 use crate::ingestion::paths;
 use crate::ingestion::pipeline::{self, ScanStatus};
@@ -42,13 +43,26 @@ pub async fn rescan_library(
     guard: State<'_, RescanGuard>,
     status: State<'_, ScanStatusState>,
 ) -> Result<(), String> {
-    rescan_library_at(&app, pool.inner(), &guard.0, &status.0, &paths::roms_path(), &paths::media_path()).await
+    // Mirrors the Electron MVP's <userData>/dats/ cache location.
+    let dats_cache_dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("dats");
+
+    rescan_library_at(
+        &app,
+        pool.inner(),
+        &guard.0,
+        &status.0,
+        &paths::roms_path(),
+        &paths::media_path(),
+        &dats_cache_dir,
+    )
+    .await
 }
 
 /// The actual guts of `rescan_library`, with the library roots taken as parameters rather than
 /// resolved internally -- the public command always passes the real `~/Relay` paths, but this is
 /// what lets a test exercise the AppHandle-emit + status-state wiring against a tempdir instead
 /// of risking a scan of whatever happens to be at the real path on the machine running it.
+#[allow(clippy::too_many_arguments)]
 async fn rescan_library_at<R: tauri::Runtime>(
     app: &AppHandle<R>,
     pool: &SqlitePool,
@@ -56,11 +70,13 @@ async fn rescan_library_at<R: tauri::Runtime>(
     status: &Mutex<ScanStatus>,
     roms_root: &Path,
     media_root: &Path,
+    dats_cache_dir: &Path,
 ) -> Result<(), String> {
     let api_key = settings::get(pool, "steamgriddbApiKey").await.map_err(|e| e.to_string())?;
     let client = api_key.map(SteamGridDbClient::new);
+    let no_intro = NoIntroDatLookup::new(dats_cache_dir.to_path_buf());
 
-    pipeline::rescan(pool, roms_root, media_root, client.as_ref(), running, |next| {
+    pipeline::rescan(pool, roms_root, media_root, &no_intro, client.as_ref(), running, |next| {
         if let Ok(mut guard) = status.lock() {
             *guard = next.clone();
         }
@@ -92,10 +108,19 @@ mod tests {
         let status = Mutex::new(ScanStatus::Idle);
         let roms_root = tempfile::tempdir().unwrap();
         let media_root = tempfile::tempdir().unwrap();
+        let dats_cache_dir = tempfile::tempdir().unwrap();
 
-        rescan_library_at(&app_handle, &pool, &running, &status, roms_root.path(), media_root.path())
-            .await
-            .unwrap();
+        rescan_library_at(
+            &app_handle,
+            &pool,
+            &running,
+            &status,
+            roms_root.path(),
+            media_root.path(),
+            dats_cache_dir.path(),
+        )
+        .await
+        .unwrap();
 
         // No systems seeded, so scan finds nothing and enrichment never starts (no api key
         // configured either) -- what matters here is that the state wiring itself works.

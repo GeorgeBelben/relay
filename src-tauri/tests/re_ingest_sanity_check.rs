@@ -6,9 +6,13 @@
 //!
 //! Compares against the Electron MVP's own dev DB
 //! (~/Library/Application Support/relay/app.dev.db as of 2026-08-29): 3 real files (2 GBA, 1 PSX)
-//! across otherwise-empty system folders.
+//! across otherwise-empty system folders. crc32/size/status are compared against that DB exactly
+//! (content-derived, so they can't drift); titles are compared against the *live* No-Intro DAT
+//! source instead of the MVP DB's stored value, since that value is a frozen, possibly-stale
+//! cache the MVP never refreshes (see REL-105's commit for a case where the two actually diverged).
 
 use relay_lib::db::{games, roms, systems};
+use relay_lib::ingestion::identify::no_intro::NoIntroDatLookup;
 use relay_lib::ingestion::{paths, pipeline};
 
 mod common;
@@ -61,8 +65,13 @@ async fn scan_and_probe_matches_mvp_output_for_the_real_dev_rom_set() {
     }
 
     let roms_root = paths::roms_path();
+    // Real fetch against the live No-Intro DAT mirror -- this test is manual/ignored specifically
+    // so it can exercise real network conditions, unlike the mocked pipeline tests.
+    let dats_cache_dir = tempfile::tempdir().unwrap();
+    let no_intro = NoIntroDatLookup::new(dats_cache_dir.path().to_path_buf());
+
     println!("scanning {}", roms_root.display());
-    let found = pipeline::scan_and_probe(&pool, &roms_root).await.unwrap();
+    let found = pipeline::scan_and_probe(&pool, &roms_root, &no_intro).await.unwrap();
     println!("found {found} rom(s)");
 
     let mut all_roms = roms::list(&pool).await.unwrap();
@@ -96,13 +105,17 @@ async fn scan_and_probe_matches_mvp_output_for_the_real_dev_rom_set() {
     assert_eq!(psx.crc32.as_deref(), Some("7420271e"));
     assert_eq!(psx.size_bytes, Some(87)); // the .cue playlist text file itself, not the .bin
 
-    // Known, expected divergence: the MVP's titles ("Super Mario Advance 4: Super Mario Bros. 3",
-    // matchConfidence 1.0 in its `games` table) come from a No-Intro DAT CRC32 lookup (REL-38 in
-    // the MVP) that hasn't been ported here -- no Linear issue in this rewrite currently covers
-    // it. This port's titles are the plain filename-derived fallback the MVP itself falls back to
-    // on a DAT miss, which is what's actually being asserted below.
+    // REL-105: titles now come from the same No-Intro DAT CRC32 lookup the MVP used. These exact
+    // strings are the live DAT's current canonical names (verified directly against
+    // raw.githubusercontent.com/libretro/libretro-database as of 2026-08-29), not app.dev.db's
+    // stored values -- that DB's cached title ("Super Mario Advance 4: Super Mario Bros. 3", with
+    // a colon) is stale relative to the live DAT (which uses a hyphen), since the MVP's own DAT
+    // cache has no refresh mechanism ("delete the cache file to force a re-fetch"). Matching the
+    // live source is the correct target here, not a frozen historical snapshot.
+    // PSX is a disc-based system, deliberately excluded from DAT lookup (see
+    // no_intro::dat_files_for), so Crash Bandicoot's title stays the plain filename-derived one.
     let titles: Vec<&str> = all_games.iter().map(|g| g.title.as_str()).collect();
     assert!(titles.contains(&"Crash Bandicoot"), "titles: {titles:?}");
-    assert!(titles.iter().any(|t| t.contains("Super Mario Advance 4")), "titles: {titles:?}");
-    assert!(titles.iter().any(|t| t.contains("Mario & Luigi")), "titles: {titles:?}");
+    assert!(titles.contains(&"Super Mario Advance 4 - Super Mario Bros. 3"), "titles: {titles:?}");
+    assert!(titles.contains(&"Mario & Luigi - Superstar Saga"), "titles: {titles:?}");
 }
