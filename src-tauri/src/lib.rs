@@ -81,6 +81,10 @@ pub fn run() {
             commands::storage::get_storage_usage,
             commands::network::list_wifi_networks,
             commands::network::connect_to_wifi_network,
+            commands::bluetooth::scan_for_bluetooth_devices,
+            commands::bluetooth::list_paired_bluetooth_devices,
+            commands::bluetooth::pair_bluetooth_device,
+            commands::bluetooth::remove_bluetooth_device,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

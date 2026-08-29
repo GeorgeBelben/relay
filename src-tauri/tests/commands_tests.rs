@@ -323,3 +323,36 @@ async fn network_commands_are_registered_and_reachable_through_ipc() {
     let error: Value = connect_res.expect_err("expected connect to fail with no real WiFi adapter");
     assert!(matches!(error["reason"].as_str(), Some("unknown") | Some("unreachable") | Some("wrong-password")));
 }
+
+#[tokio::test]
+async fn bluetooth_commands_are_registered_and_reachable_through_ipc() {
+    // No real bluetoothctl/Bluetooth adapter in this dev environment (see system::bluetooth's
+    // module docs) -- this only proves the IPC wiring, not bluetoothctl's actual behavior. Real
+    // execution needs REL-91's real-hardware verification pass.
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![
+            commands::bluetooth::scan_for_bluetooth_devices,
+            commands::bluetooth::list_paired_bluetooth_devices,
+            commands::bluetooth::pair_bluetooth_device,
+            commands::bluetooth::remove_bluetooth_device,
+        ])
+        .build(mock_context(noop_assets()))
+        .expect("failed to build mock app");
+
+    let webview = WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
+
+    let scan_res = get_ipc_response(&webview, invoke_request("scan_for_bluetooth_devices", json!({})));
+    assert!(scan_res.is_err(), "expected bluetoothctl-not-found on a machine with no BlueZ");
+
+    let list_res = get_ipc_response(&webview, invoke_request("list_paired_bluetooth_devices", json!({})));
+    assert!(list_res.is_err(), "expected bluetoothctl-not-found on a machine with no BlueZ");
+
+    let pair_res =
+        get_ipc_response(&webview, invoke_request("pair_bluetooth_device", json!({ "address": "AA:BB:CC:DD:EE:FF" })));
+    let pair_error: Value = pair_res.expect_err("expected pairing to fail with no real Bluetooth adapter");
+    assert!(matches!(pair_error["reason"].as_str(), Some("unknown") | Some("unreachable") | Some("rejected")));
+
+    let remove_res =
+        get_ipc_response(&webview, invoke_request("remove_bluetooth_device", json!({ "address": "AA:BB:CC:DD:EE:FF" })));
+    assert!(remove_res.is_err(), "expected bluetoothctl-not-found on a machine with no BlueZ");
+}

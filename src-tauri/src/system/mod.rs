@@ -1,4 +1,4 @@
-// OS-integration concerns that don't fit db/ingestion/emulator/commands -- bluetooth (REL-111)
-// lands here next.
+// OS-integration concerns that don't fit db/ingestion/emulator/commands.
+pub mod bluetooth;
 pub mod network;
 pub mod storage;

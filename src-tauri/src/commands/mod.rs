@@ -1,3 +1,4 @@
+pub mod bluetooth;
 pub mod emulator;
 pub mod games;
 pub mod ingestion;
