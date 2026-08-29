@@ -21,19 +21,6 @@
   --font-lexend-deca: "Lexend Deca", ui-sans-serif, system-ui, sans-serif;
   --font-space-grotesk: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-space-mono: "Space Mono", ui-monospace, monospace;
-
-  /* Design tokens ported from the Electron MVP -- referencing Tailwind's own --color-* vars
-     rather than duplicating raw values, so these track the palette Tailwind already generates
-     instead of a second, driftable copy of it. Adjust freely; these are a starting point, not a
-     fixed design. */
-  --color-primary: var(--color-white);
-  --color-primary-foreground: var(--color-zinc-900);
-  --color-muted: var(--color-zinc-800);
-  --color-muted-foreground: var(--color-zinc-400);
-  --color-card: var(--color-zinc-900);
-  --color-card-foreground: var(--color-white);
-  --color-border: var(--color-zinc-700);
-  --color-destructive: var(--color-red-500);
 }
 
 body {
