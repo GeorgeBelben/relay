@@ -3338,6 +3338,7 @@ name = "relay"
 version = "0.1.0"
 dependencies = [
  "crc32fast",
+ "dirs",
  "nanoid",
  "regex",
  "reqwest",

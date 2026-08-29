@@ -5,4 +5,4 @@ pub mod ra_stats;
 pub mod roms;
 pub mod settings;
 pub mod systems;
-mod time;
+pub(crate) mod time;

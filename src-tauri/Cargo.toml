@@ -29,6 +29,7 @@ regex = "1"
 crc32fast = "1"
 unicode-normalization = "0.1"
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+dirs = "6"
 
 [dev-dependencies]
 tempfile = "3"
