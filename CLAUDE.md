@@ -12,9 +12,12 @@ This repo is a **ground-up rewrite** from Electron to **Tauri v2 + Rust**, with 
 
 - **Shell**: Tauri v2
 - **Frontend**: React + TypeScript
+  - TanStack Router (file-based, `src/routes/**` → generated `src/routeTree.gen.ts`, gitignored) — memory history, not browser history (Tauri's webview isn't a plain http:// origin)
   - React Query for all backend-driven state (data from Rust commands)
   - Zustand or React Context for pure UI state only (view state, modals) — never route this through Tauri
   - Tauri's `emit`/`listen` event system for backend→frontend pushes (e.g. ingestion progress), not polling
+  - Self-hosted fonts (`src/fonts.css` + `src/assets/fonts/`) — no CDN, this runs on a kiosk device with no guaranteed internet
+  - `oxlint`/`oxfmt` for frontend linting/formatting (`bun run lint` / `bun run fmt`) — scoped away from `src-tauri/` via `.prettierignore`, since that's a separate Rust project formatted with `cargo fmt`
 - **Backend**: Rust, single crate, module-based (not a Cargo workspace)
   - `src-tauri/src/db/` — sqlx repositories
   - `src-tauri/src/ingestion/` — scan → probe → identify → enrich pipeline

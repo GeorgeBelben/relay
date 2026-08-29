@@ -1,0 +1,6 @@
+# oxfmt (and any other Prettier-compatible formatter) picks this up automatically to scope
+# itself to the frontend -- src-tauri is a separate Rust project (formatted with `cargo fmt`,
+# not this), and routeTree.gen.ts is regenerated on every dev/build run.
+src-tauri/
+dist/
+src/routeTree.gen.ts

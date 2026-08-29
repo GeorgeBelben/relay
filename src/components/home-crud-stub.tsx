@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Logo } from "./components/logo";
-import { useCreateGame, useDeleteGame, useGames, useUpdateGame } from "./hooks/use-games";
-import { useCreateRom, useRoms } from "./hooks/use-roms";
-import { useCreateSystem, useSystems } from "./hooks/use-systems";
+import { Logo } from "@/components/logo";
+import { useCreateGame, useDeleteGame, useGames, useUpdateGame } from "@/hooks/use-games";
+import { useCreateRom, useRoms } from "@/hooks/use-roms";
+import { useCreateSystem, useSystems } from "@/hooks/use-systems";
 
 // Minimal, unstyled CRUD stub proving the data layer end to end through the UI
 // (create a system -> a rom on it -> a game on that rom, then edit/delete it).
-// Not real library UI -- that comes with the ingestion pipeline and library screens.
+// Not real library UI -- that's for you to build on top of this scaffold.
 function SystemsSection() {
   const { data: systems } = useSystems();
   const createSystem = useCreateSystem();
@@ -137,7 +137,7 @@ function GamesSection() {
   );
 }
 
-export function App() {
+export function HomeCrudStub() {
   return (
     <div className="h-svh flex items-center justify-center">
       <Logo className="w-32" />

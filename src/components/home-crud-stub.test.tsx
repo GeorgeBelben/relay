@@ -1,28 +1,28 @@
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { App } from "./root";
-import type { Game } from "./hooks/use-games";
-import type { Rom } from "./hooks/use-roms";
-import type { System } from "./hooks/use-systems";
+import { HomeCrudStub } from "./home-crud-stub";
+import type { Game } from "@/hooks/use-games";
+import type { Rom } from "@/hooks/use-roms";
+import type { System } from "@/hooks/use-systems";
 
 const invokeMock = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => invokeMock(...args),
 }));
 
-function renderApp() {
+function renderHomeCrudStub() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <App />
+      <HomeCrudStub />
     </QueryClientProvider>,
   );
 }
 
-describe("App", () => {
+describe("HomeCrudStub", () => {
   it("shows a loading state, then renders the fetched games as a list", async () => {
     const games: Game[] = [
       {
@@ -47,7 +47,7 @@ describe("App", () => {
       throw new Error(`unexpected invoke: ${cmd}`);
     });
 
-    renderApp();
+    renderHomeCrudStub();
 
     expect(screen.getByText("Loading games...")).toBeInTheDocument();
 
@@ -58,7 +58,7 @@ describe("App", () => {
   it("renders an error message when the command fails", async () => {
     invokeMock.mockRejectedValue(new Error("db unavailable"));
 
-    renderApp();
+    renderHomeCrudStub();
 
     await waitFor(() => expect(screen.getByText(/Error:/)).toBeInTheDocument());
   });
@@ -133,7 +133,7 @@ describe("App", () => {
       }
     });
 
-    renderApp();
+    renderHomeCrudStub();
 
     fireEvent.change(screen.getByPlaceholderText("id (e.g. nes)"), { target: { value: "nes" } });
     fireEvent.change(screen.getByPlaceholderText("name"), { target: { value: "NES" } });
