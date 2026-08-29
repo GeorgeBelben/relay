@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
 // ~/Relay -- ported from the Electron MVP's libraryPaths.ts. Only the paths the ingestion
-// pipeline actually needs so far (roms + downloaded media) are ported; saves/savestates/
-// screenshots/wallpapers land when emulator launch (Phase 4) or later features need them.
-fn library_root() -> PathBuf {
+// pipeline actually needs so far (roms + downloaded media) are ported here; the remaining
+// subdirectories (bios/wallpapers/saves/savestates/screenshots) are system::storage's concern
+// (it just needs this one root, not a helper per subdirectory), not ingestion's.
+pub fn library_root() -> PathBuf {
     dirs::home_dir().expect("could not resolve home directory").join("Relay")
 }
 

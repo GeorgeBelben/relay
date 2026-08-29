@@ -2,6 +2,7 @@ pub mod commands;
 pub mod db;
 pub mod emulator;
 pub mod ingestion;
+pub mod system;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use tauri::Manager;
@@ -77,6 +78,7 @@ pub fn run() {
             commands::settings::set_wallpaper,
             commands::settings::set_sound_volume,
             commands::settings::set_rumble_enabled,
+            commands::storage::get_storage_usage,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

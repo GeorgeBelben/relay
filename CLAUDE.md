@@ -22,6 +22,7 @@ This repo is a **ground-up rewrite** from Electron to **Tauri v2 + Rust**, with 
   - `src-tauri/src/db/` — sqlx repositories
   - `src-tauri/src/ingestion/` — scan → probe → identify → enrich pipeline
   - `src-tauri/src/emulator/` — `tokio::process` launch/kill/monitor
+  - `src-tauri/src/system/` — OS-integration concerns outside db/ingestion/emulator: storage (disk usage breakdown), network and bluetooth land here too
   - `src-tauri/src/commands/` — Tauri command handlers (thin, delegate to the above)
 - **Database**: SQLite via `sqlx` (async, compile-time query checking)
 - **Async runtime**: `tokio` throughout — keep DB and process handling consistently async

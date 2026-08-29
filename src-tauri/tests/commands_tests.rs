@@ -272,3 +272,24 @@ async fn general_settings_commands_round_trip_through_ipc_with_camel_case_args()
         .unwrap();
     assert!(cleared["active_profile_id"].is_null());
 }
+
+#[tokio::test]
+async fn get_storage_usage_command_returns_a_category_breakdown_through_ipc() {
+    // No throwaway_pool needed -- get_storage_usage is purely filesystem/statvfs-based, no DB.
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![commands::storage::get_storage_usage])
+        .build(mock_context(noop_assets()))
+        .expect("failed to build mock app");
+
+    let webview = WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
+
+    let res = get_ipc_response(&webview, invoke_request("get_storage_usage", json!({})));
+    let usage: Value = res.expect("get_storage_usage should succeed").deserialize().unwrap();
+
+    assert!(usage["total_bytes"].as_u64().unwrap() > 0);
+    assert!(usage["games_bytes"].as_u64().is_some());
+    assert!(usage["bios_bytes"].as_u64().is_some());
+    assert!(usage["media_bytes"].as_u64().is_some());
+    assert!(usage["saves_bytes"].as_u64().is_some());
+    assert!(usage["system_bytes"].as_u64().is_some());
+}
