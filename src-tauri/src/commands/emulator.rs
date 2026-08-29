@@ -90,15 +90,13 @@ pub async fn launch_game<R: tauri::Runtime>(
     Ok(())
 }
 
-/// `cores_path` comes from Settings (mirrors the MVP's `store.get("retroarchCoresPath")`), and
+/// `cores_path` comes from Settings, falling back to the MVP's own default (a stock Ubuntu apt
+/// install's libretro cores directory) rather than erroring when unset -- REL-108. And
 /// `append_config_path` is currently an empty placeholder file -- REL-106 will populate it with
 /// real save/state/screenshot directory overrides; an empty file is a harmless no-op
 /// `--appendconfig` target in the meantime, so a RetroArch launch itself isn't blocked on that.
 async fn build_retroarch_options<R: tauri::Runtime>(app: &AppHandle<R>, pool: &SqlitePool, game_id: &str) -> Result<RetroarchOptions, String> {
-    let cores_path = settings::get(pool, "retroarchCoresPath")
-        .await
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "No RetroArch cores path configured (Settings)".to_string())?;
+    let cores_path = settings::get_general_settings(pool).await.map_err(|e| e.to_string())?.retroarch_cores_path;
 
     let config_dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("launch-configs");
     tokio::fs::create_dir_all(&config_dir).await.map_err(|e| e.to_string())?;

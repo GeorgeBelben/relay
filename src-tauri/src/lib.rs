@@ -69,6 +69,14 @@ pub fn run() {
             commands::systems::delete_system,
             commands::settings::get_setting,
             commands::settings::set_setting,
+            commands::settings::get_general_settings,
+            commands::settings::set_onboarding_completed,
+            commands::settings::set_controller_type,
+            commands::settings::set_active_profile_id,
+            commands::settings::set_retroarch_cores_path,
+            commands::settings::set_wallpaper,
+            commands::settings::set_sound_volume,
+            commands::settings::set_rumble_enabled,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

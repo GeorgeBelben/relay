@@ -220,3 +220,55 @@ async fn launch_game_command_spawns_via_the_real_ipc_boundary_and_reports_status
     let kill_res = get_ipc_response(&webview, invoke_request("kill_game", json!({})));
     assert!(kill_res.is_err(), "expected kill_game to fail when nothing is running");
 }
+
+#[tokio::test]
+async fn general_settings_commands_round_trip_through_ipc_with_camel_case_args() {
+    let (pool, _dir) = throwaway_pool().await;
+
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![
+            commands::settings::get_general_settings,
+            commands::settings::set_controller_type,
+            commands::settings::set_active_profile_id,
+            commands::settings::set_sound_volume,
+        ])
+        .build(mock_context(noop_assets()))
+        .expect("failed to build mock app");
+    app.manage(pool);
+
+    let webview = WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
+
+    let defaults_res = get_ipc_response(&webview, invoke_request("get_general_settings", json!({})));
+    let defaults: Value = defaults_res.expect("get_general_settings should succeed").deserialize().unwrap();
+    assert_eq!(defaults["controller_type"], "xbox");
+    assert_eq!(defaults["sound_volume"], 70);
+    assert!(defaults["active_profile_id"].is_null());
+
+    let set_controller_res = get_ipc_response(
+        &webview,
+        invoke_request("set_controller_type", json!({ "controllerType": "playstation" })),
+    );
+    assert!(set_controller_res.is_ok(), "set_controller_type failed: {:?}", set_controller_res);
+
+    let set_profile_res =
+        get_ipc_response(&webview, invoke_request("set_active_profile_id", json!({ "profileId": "profile-1" })));
+    assert!(set_profile_res.is_ok(), "set_active_profile_id failed: {:?}", set_profile_res);
+
+    let set_volume_res = get_ipc_response(&webview, invoke_request("set_sound_volume", json!({ "volume": 42 })));
+    assert!(set_volume_res.is_ok(), "set_sound_volume failed: {:?}", set_volume_res);
+
+    let updated_res = get_ipc_response(&webview, invoke_request("get_general_settings", json!({})));
+    let updated: Value = updated_res.expect("get_general_settings should succeed").deserialize().unwrap();
+    assert_eq!(updated["controller_type"], "playstation");
+    assert_eq!(updated["active_profile_id"], "profile-1");
+    assert_eq!(updated["sound_volume"], 42);
+
+    // null clears it back to "no active profile" -- Option<String> deserializing from a JS null.
+    let clear_res = get_ipc_response(&webview, invoke_request("set_active_profile_id", json!({ "profileId": null })));
+    assert!(clear_res.is_ok(), "clearing active profile failed: {:?}", clear_res);
+    let cleared: Value = get_ipc_response(&webview, invoke_request("get_general_settings", json!({})))
+        .unwrap()
+        .deserialize()
+        .unwrap();
+    assert!(cleared["active_profile_id"].is_null());
+}
