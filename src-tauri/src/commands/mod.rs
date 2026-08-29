@@ -1,8 +1,10 @@
 pub mod bluetooth;
 pub mod emulator;
+pub mod game_media;
 pub mod games;
 pub mod ingestion;
 pub mod network;
+pub mod profiles;
 pub mod roms;
 pub mod settings;
 pub mod storage;

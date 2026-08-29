@@ -85,6 +85,13 @@ pub fn run() {
             commands::bluetooth::list_paired_bluetooth_devices,
             commands::bluetooth::pair_bluetooth_device,
             commands::bluetooth::remove_bluetooth_device,
+            commands::profiles::list_profiles,
+            commands::profiles::get_profile,
+            commands::profiles::create_profile,
+            commands::profiles::rename_profile,
+            commands::profiles::delete_profile,
+            commands::game_media::list_game_media,
+            commands::game_media::get_media_root_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

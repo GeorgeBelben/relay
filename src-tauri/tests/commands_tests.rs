@@ -356,3 +356,102 @@ async fn bluetooth_commands_are_registered_and_reachable_through_ipc() {
         get_ipc_response(&webview, invoke_request("remove_bluetooth_device", json!({ "address": "AA:BB:CC:DD:EE:FF" })));
     assert!(remove_res.is_err(), "expected bluetoothctl-not-found on a machine with no BlueZ");
 }
+
+#[tokio::test]
+async fn profile_commands_round_trip_through_ipc() {
+    let (pool, _dir) = throwaway_pool().await;
+
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![
+            commands::profiles::list_profiles,
+            commands::profiles::get_profile,
+            commands::profiles::create_profile,
+            commands::profiles::rename_profile,
+            commands::profiles::delete_profile,
+        ])
+        .build(mock_context(noop_assets()))
+        .expect("failed to build mock app");
+    app.manage(pool);
+
+    let webview = WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
+
+    let empty_res = get_ipc_response(&webview, invoke_request("list_profiles", json!({})));
+    let empty: Value = empty_res.expect("list_profiles should succeed").deserialize().unwrap();
+    assert_eq!(empty.as_array().unwrap().len(), 0);
+
+    let create_res = get_ipc_response(&webview, invoke_request("create_profile", json!({ "name": "George" })));
+    let created: Value = create_res.expect("create_profile should succeed").deserialize().unwrap();
+    assert_eq!(created["name"], "George");
+    let profile_id = created["id"].as_str().unwrap().to_string();
+
+    let rename_res =
+        get_ipc_response(&webview, invoke_request("rename_profile", json!({ "id": profile_id, "name": "Georgie" })));
+    let renamed: Value = rename_res.expect("rename_profile should succeed").deserialize().unwrap();
+    assert_eq!(renamed["name"], "Georgie");
+
+    let get_res = get_ipc_response(&webview, invoke_request("get_profile", json!({ "id": profile_id })));
+    let fetched: Value = get_res.expect("get_profile should succeed").deserialize().unwrap();
+    assert_eq!(fetched["name"], "Georgie");
+
+    let delete_res = get_ipc_response(&webview, invoke_request("delete_profile", json!({ "id": profile_id })));
+    assert!(delete_res.is_ok(), "delete_profile failed: {:?}", delete_res);
+
+    let after_delete_res = get_ipc_response(&webview, invoke_request("get_profile", json!({ "id": profile_id })));
+    let after_delete: Value = after_delete_res.expect("get_profile should succeed").deserialize().unwrap();
+    assert!(after_delete.is_null());
+}
+
+#[tokio::test]
+async fn game_media_commands_are_reachable_through_ipc() {
+    let (pool, _dir) = throwaway_pool().await;
+
+    relay_lib::db::systems::create(
+        &pool,
+        relay_lib::db::systems::NewSystem {
+            id: "nes".into(),
+            name: "NES".into(),
+            extensions: r#"["nes"]"#.into(),
+            retroarch_core: Some("mesen".into()),
+            standalone_binary: None,
+        },
+    )
+    .await
+    .unwrap();
+    let rom = relay_lib::db::roms::create(
+        &pool,
+        relay_lib::db::roms::NewRom { system_id: "nes".into(), path: "nes/game.nes".into(), crc32: None, size_bytes: None, discs: None },
+    )
+    .await
+    .unwrap();
+    let game =
+        relay_lib::db::games::create(&pool, relay_lib::db::games::NewGame { rom_id: rom.id, title: "A Game".into() }).await.unwrap();
+    relay_lib::db::game_media::create(
+        &pool,
+        relay_lib::db::game_media::NewGameMedia {
+            game_id: game.id.clone(),
+            kind: "boxart".into(),
+            local_path: "nes/game-1/boxart.png".into(),
+            source_url: None,
+        },
+    )
+    .await
+    .unwrap();
+
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![commands::game_media::list_game_media, commands::game_media::get_media_root_path])
+        .build(mock_context(noop_assets()))
+        .expect("failed to build mock app");
+    app.manage(pool);
+
+    let webview = WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
+
+    let list_res = get_ipc_response(&webview, invoke_request("list_game_media", json!({ "gameId": game.id })));
+    let media: Value = list_res.expect("list_game_media should succeed").deserialize().unwrap();
+    let media = media.as_array().unwrap();
+    assert_eq!(media.len(), 1);
+    assert_eq!(media[0]["local_path"], "nes/game-1/boxart.png");
+
+    let root_res = get_ipc_response(&webview, invoke_request("get_media_root_path", json!({})));
+    let root: Value = root_res.expect("get_media_root_path should succeed").deserialize().unwrap();
+    assert!(root.as_str().unwrap().ends_with("Relay/media"));
+}
