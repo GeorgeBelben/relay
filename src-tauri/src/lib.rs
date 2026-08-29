@@ -79,6 +79,8 @@ pub fn run() {
             commands::settings::set_sound_volume,
             commands::settings::set_rumble_enabled,
             commands::storage::get_storage_usage,
+            commands::network::list_wifi_networks,
+            commands::network::connect_to_wifi_network,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

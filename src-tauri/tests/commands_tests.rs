@@ -293,3 +293,33 @@ async fn get_storage_usage_command_returns_a_category_breakdown_through_ipc() {
     assert!(usage["saves_bytes"].as_u64().is_some());
     assert!(usage["system_bytes"].as_u64().is_some());
 }
+
+#[tokio::test]
+async fn network_commands_are_registered_and_reachable_through_ipc() {
+    // No real nmcli/NetworkManager in this dev environment (see system::network's module docs),
+    // so this only proves the IPC wiring -- camelCase args deserializing, command names matching
+    // the frontend's expectations -- not nmcli's actual behavior. Real execution needs REL-91's
+    // real-hardware verification pass, same as controller input and bluetoothctl.
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![
+            commands::network::list_wifi_networks,
+            commands::network::connect_to_wifi_network,
+        ])
+        .build(mock_context(noop_assets()))
+        .expect("failed to build mock app");
+
+    let webview = WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
+
+    let list_res = get_ipc_response(&webview, invoke_request("list_wifi_networks", json!({})));
+    assert!(list_res.is_err(), "expected nmcli-not-found on a machine with no NetworkManager");
+
+    let connect_res = get_ipc_response(
+        &webview,
+        invoke_request("connect_to_wifi_network", json!({ "ssid": "SomeNetwork", "password": "hunter2" })),
+    );
+    // Don't assert a specific reason -- whether the test/CI machine has nmcli installed at all
+    // (it won't have a WiFi adapter either way) affects which of the three tagged variants comes
+    // back. This only proves the command is reachable and returns a well-formed tagged error.
+    let error: Value = connect_res.expect_err("expected connect to fail with no real WiFi adapter");
+    assert!(matches!(error["reason"].as_str(), Some("unknown") | Some("unreachable") | Some("wrong-password")));
+}
