@@ -164,3 +164,59 @@ async fn settings_commands_round_trip_through_ipc() {
     let value: Value = get_res.expect("get_setting should succeed").deserialize().unwrap();
     assert_eq!(value, "abc123");
 }
+
+#[tokio::test]
+async fn launch_game_command_spawns_via_the_real_ipc_boundary_and_reports_status() {
+    let (pool, _dir) = throwaway_pool().await;
+
+    // "true" stands in for a real emulator binary -- exists on every Unix dev/CI machine, exits
+    // 0 immediately regardless of arguments, so this proves the full DB-lookup -> build-command ->
+    // spawn -> status pipeline without needing a real RetroArch/PCSX2/Dolphin install.
+    relay_lib::db::systems::create(
+        &pool,
+        relay_lib::db::systems::NewSystem {
+            id: "snes".into(),
+            name: "SNES".into(),
+            extensions: r#"["sfc"]"#.into(),
+            retroarch_core: None,
+            standalone_binary: Some("true".into()),
+        },
+    )
+    .await
+    .unwrap();
+    let rom = relay_lib::db::roms::create(
+        &pool,
+        relay_lib::db::roms::NewRom { system_id: "snes".into(), path: "snes/game.sfc".into(), crc32: None, size_bytes: None, discs: None },
+    )
+    .await
+    .unwrap();
+    let game =
+        relay_lib::db::games::create(&pool, relay_lib::db::games::NewGame { rom_id: rom.id, title: "A Game".into() }).await.unwrap();
+
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![
+            commands::emulator::launch_game,
+            commands::emulator::get_launcher_status,
+            commands::emulator::kill_game,
+        ])
+        .build(mock_context(noop_assets()))
+        .expect("failed to build mock app");
+    app.manage(pool);
+    app.manage(commands::emulator::LauncherState::default());
+
+    let webview = WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
+
+    let launch_res = get_ipc_response(&webview, invoke_request("launch_game", json!({ "gameId": game.id })));
+    assert!(launch_res.is_ok(), "launch_game failed: {:?}", launch_res);
+
+    // launch_game awaits the whole process lifecycle before resolving (matching
+    // ingestion::pipeline::rescan's precedent), so by the time it returns, "true" has already
+    // exited and get_launcher_status should reflect the final state.
+    let status_res = get_ipc_response(&webview, invoke_request("get_launcher_status", json!({})));
+    let status: Value = status_res.expect("get_launcher_status should succeed").deserialize().unwrap();
+    assert_eq!(status["state"], "exited");
+
+    // Nothing is running any more, so kill_game should report that rather than silently no-op.
+    let kill_res = get_ipc_response(&webview, invoke_request("kill_game", json!({})));
+    assert!(kill_res.is_err(), "expected kill_game to fail when nothing is running");
+}

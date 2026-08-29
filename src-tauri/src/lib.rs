@@ -42,12 +42,16 @@ pub fn run() {
             });
             app.manage(commands::ingestion::RescanGuard::default());
             app.manage(commands::ingestion::ScanStatusState::default());
+            app.manage(commands::emulator::LauncherState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             greet,
             commands::ingestion::rescan_library,
             commands::ingestion::get_scan_status,
+            commands::emulator::launch_game,
+            commands::emulator::kill_game,
+            commands::emulator::get_launcher_status,
             commands::games::list_games,
             commands::games::get_game,
             commands::games::create_game,
