@@ -1,7 +1,27 @@
-use relay_lib::db::{game_media, games, profiles, ra_stats, roms, systems};
+use relay_lib::db::{game_media, games, profiles, ra_stats, roms, settings, systems};
 
 mod common;
 use common::throwaway_pool;
+
+#[tokio::test]
+async fn settings_get_and_set_round_trip() {
+    let (pool, _dir) = throwaway_pool().await;
+
+    assert_eq!(settings::get(&pool, "steamgriddbApiKey").await.unwrap(), None);
+
+    settings::set(&pool, "steamgriddbApiKey", "abc123").await.unwrap();
+    assert_eq!(
+        settings::get(&pool, "steamgriddbApiKey").await.unwrap(),
+        Some("abc123".to_string())
+    );
+
+    // set() on an existing key overwrites rather than erroring.
+    settings::set(&pool, "steamgriddbApiKey", "def456").await.unwrap();
+    assert_eq!(
+        settings::get(&pool, "steamgriddbApiKey").await.unwrap(),
+        Some("def456".to_string())
+    );
+}
 
 #[tokio::test]
 async fn systems_crud_round_trip() {

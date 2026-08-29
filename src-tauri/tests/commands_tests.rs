@@ -126,3 +126,41 @@ async fn create_rom_and_game_commands_accept_camel_case_args() {
     let list: Value = list_res.expect("list_games should succeed").deserialize().unwrap();
     assert_eq!(list.as_array().unwrap().len(), 1);
 }
+
+#[tokio::test]
+async fn settings_commands_round_trip_through_ipc() {
+    let (pool, _dir) = throwaway_pool().await;
+
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![
+            commands::settings::get_setting,
+            commands::settings::set_setting,
+        ])
+        .build(mock_context(noop_assets()))
+        .expect("failed to build mock app");
+    app.manage(pool);
+
+    let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+
+    let missing_res = get_ipc_response(
+        &webview,
+        invoke_request("get_setting", json!({ "key": "steamgriddbApiKey" })),
+    );
+    let missing: Value = missing_res.expect("get_setting should succeed").deserialize().unwrap();
+    assert!(missing.is_null());
+
+    let set_res = get_ipc_response(
+        &webview,
+        invoke_request("set_setting", json!({ "key": "steamgriddbApiKey", "value": "abc123" })),
+    );
+    assert!(set_res.is_ok(), "set_setting failed: {:?}", set_res);
+
+    let get_res = get_ipc_response(
+        &webview,
+        invoke_request("get_setting", json!({ "key": "steamgriddbApiKey" })),
+    );
+    let value: Value = get_res.expect("get_setting should succeed").deserialize().unwrap();
+    assert_eq!(value, "abc123");
+}
