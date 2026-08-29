@@ -6,10 +6,15 @@ use tokio::process::Command;
 
 // Pushed to the frontend as the emulator process starts, runs, and exits. "launching" covers the
 // spawn call itself; "running" fires once the OS confirms the process actually started (spawn()
-// succeeding), not just that it was called; "exited" fires on any process exit regardless of exit
-// code -- this baseline doesn't yet distinguish a clean quit from a crash (see REL-88). Mirrors
-// the Electron MVP's shared/types.ts#LauncherStatus exactly (serde's internal tagging +
-// kebab-case rename), same pattern as ingestion::pipeline::ScanStatus.
+// succeeding), not just that it was called. Originally mirrored the Electron MVP's
+// shared/types.ts#LauncherStatus exactly (which only had "exited", firing on any exit regardless
+// of code -- REL-36 in the old project never distinguished a clean quit from a crash), but
+// REL-88 splits that into "exited" (a zero exit code -- the emulator's own quit path) and
+// "crashed" (anything else: a nonzero exit code, or terminated by a signal on Unix) so the UI can
+// show a real error state instead of silently returning to Home either way, which is what "don't
+// leave the kiosk frozen" actually requires -- a frozen *process* is caught by "running" simply
+// never transitioning, but a process that's already gone with no thrown JS error (the old
+// Electron model) needs this distinction to be visible at all.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(tag = "state", rename_all = "kebab-case")]
 pub enum LauncherStatus {
@@ -17,7 +22,19 @@ pub enum LauncherStatus {
     Launching,
     Running,
     Exited,
+    Crashed { exit_code: Option<i32>, signal: Option<i32> },
     Error { message: String },
+}
+
+#[cfg(unix)]
+fn signal_of(status: &ExitStatus) -> Option<i32> {
+    use std::os::unix::process::ExitStatusExt;
+    status.signal()
+}
+
+#[cfg(not(unix))]
+fn signal_of(_status: &ExitStatus) -> Option<i32> {
+    None
 }
 
 #[derive(Debug)]
@@ -82,7 +99,14 @@ pub async fn launch(
 
     match result {
         Ok(exit_status) => {
-            on_status(LauncherStatus::Exited);
+            if exit_status.success() {
+                on_status(LauncherStatus::Exited);
+            } else {
+                on_status(LauncherStatus::Crashed {
+                    exit_code: exit_status.code(),
+                    signal: signal_of(&exit_status),
+                });
+            }
             Ok(exit_status)
         }
         Err(e) => {
@@ -97,13 +121,13 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn reports_launching_then_running_then_exited_and_captures_the_exit_code() {
+    async fn reports_launching_then_running_then_exited_on_a_clean_zero_exit() {
         let running = AtomicBool::new(false);
         let mut statuses = Vec::new();
 
         let exit_status = launch(
             "sh",
-            &["-c".to_string(), "exit 3".to_string()],
+            &["-c".to_string(), "exit 0".to_string()],
             &running,
             |s| statuses.push(s),
         )
@@ -111,8 +135,47 @@ mod tests {
         .unwrap();
 
         assert_eq!(statuses, vec![LauncherStatus::Launching, LauncherStatus::Running, LauncherStatus::Exited]);
-        assert_eq!(exit_status.code(), Some(3));
+        assert_eq!(exit_status.code(), Some(0));
         assert!(!running.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn nonzero_exit_code_is_reported_as_crashed() {
+        let running = AtomicBool::new(false);
+        let mut statuses = Vec::new();
+
+        let exit_status = launch(
+            "sh",
+            &["-c".to_string(), "exit 42".to_string()],
+            &running,
+            |s| statuses.push(s),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            statuses,
+            vec![
+                LauncherStatus::Launching,
+                LauncherStatus::Running,
+                LauncherStatus::Crashed { exit_code: Some(42), signal: None },
+            ]
+        );
+        assert_eq!(exit_status.code(), Some(42));
+    }
+
+    #[tokio::test]
+    async fn signal_terminated_process_is_reported_as_crashed_with_the_signal() {
+        let running = AtomicBool::new(false);
+        let mut statuses = Vec::new();
+
+        // Sends SIGKILL to itself -- deterministic, no real crash needed to prove the plumbing.
+        launch("sh", &["-c".to_string(), "kill -9 $$".to_string()], &running, |s| statuses.push(s))
+            .await
+            .unwrap();
+
+        assert_eq!(statuses.len(), 3);
+        assert_eq!(statuses[2], LauncherStatus::Crashed { exit_code: None, signal: Some(9) });
     }
 
     #[tokio::test]
