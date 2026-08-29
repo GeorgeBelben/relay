@@ -3068,6 +3068,7 @@ name = "relay"
 version = "0.1.0"
 dependencies = [
  "nanoid",
+ "regex",
  "serde",
  "serde_json",
  "sqlx",
