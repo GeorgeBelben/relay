@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO game_media (id, game_id, kind, local_path, source_url, created_at)\n           VALUES (?, ?, ?, ?, ?, ?)\n           RETURNING id, game_id, kind, local_path, source_url, created_at as \"created_at!: i64\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "game_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "game_id"
+          }
+        }
+      },
+      {
+        "name": "kind",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "local_path",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "local_path"
+          }
+        }
+      },
+      {
+        "name": "source_url",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "source_url"
+          }
+        }
+      },
+      {
+        "name": "created_at!: i64",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "556b7dddfab1ed22132f37447e42019c189a3241ff461580489e6bf2ce738a6b"
+}

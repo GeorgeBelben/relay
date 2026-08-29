@@ -1,0 +1,158 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, rom_id, title, scanned_title,\n                  steamgriddb_id as \"steamgriddb_id: i64\",\n                  match_confidence,\n                  enriched_at as \"enriched_at: i64\",\n                  retroachievements_game_id as \"retroachievements_game_id: i64\",\n                  retroachievements_matched_at as \"retroachievements_matched_at: i64\",\n                  ra_highest_award_kind,\n                  created_at as \"created_at!: i64\", updated_at as \"updated_at!: i64\"\n           FROM games WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "rom_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "rom_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "scanned_title",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "scanned_title"
+          }
+        }
+      },
+      {
+        "name": "steamgriddb_id: i64",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "steamgriddb_id"
+          }
+        }
+      },
+      {
+        "name": "match_confidence",
+        "ordinal": 5,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "match_confidence"
+          }
+        }
+      },
+      {
+        "name": "enriched_at: i64",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "enriched_at"
+          }
+        }
+      },
+      {
+        "name": "retroachievements_game_id: i64",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "retroachievements_game_id"
+          }
+        }
+      },
+      {
+        "name": "retroachievements_matched_at: i64",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "retroachievements_matched_at"
+          }
+        }
+      },
+      {
+        "name": "ra_highest_award_kind",
+        "ordinal": 9,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "ra_highest_award_kind"
+          }
+        }
+      },
+      {
+        "name": "created_at!: i64",
+        "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "name": "updated_at!: i64",
+        "ordinal": 11,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "1e4addd8bcd625afda172f2fdaf1f17ca06c3da2981105194b42df87482025e0"
+}

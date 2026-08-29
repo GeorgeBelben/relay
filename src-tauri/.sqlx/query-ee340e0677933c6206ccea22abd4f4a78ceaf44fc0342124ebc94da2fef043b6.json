@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO ra_stats (profile_id, points, rank, recent_unlocks_json, refreshed_at)\n           VALUES (?, ?, ?, ?, ?)\n           ON CONFLICT (profile_id) DO UPDATE SET\n             points = excluded.points,\n             rank = excluded.rank,\n             recent_unlocks_json = excluded.recent_unlocks_json,\n             refreshed_at = excluded.refreshed_at\n           RETURNING profile_id, points as \"points!: i64\", rank, recent_unlocks_json,\n                     refreshed_at as \"refreshed_at!: i64\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "profile_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "profile_id"
+          }
+        }
+      },
+      {
+        "name": "points!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "points"
+          }
+        }
+      },
+      {
+        "name": "rank",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "rank"
+          }
+        }
+      },
+      {
+        "name": "recent_unlocks_json",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "recent_unlocks_json"
+          }
+        }
+      },
+      {
+        "name": "refreshed_at!: i64",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "refreshed_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ee340e0677933c6206ccea22abd4f4a78ceaf44fc0342124ebc94da2fef043b6"
+}

@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE systems SET name = ?, extensions = ?, retroarch_core = ?, standalone_binary = ?\n           WHERE id = ?\n           RETURNING id, name, extensions, retroarch_core, standalone_binary",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "extensions",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "extensions"
+          }
+        }
+      },
+      {
+        "name": "retroarch_core",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "retroarch_core"
+          }
+        }
+      },
+      {
+        "name": "standalone_binary",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "standalone_binary"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "f4a7ebb9c5ac8a26f8d9ca4c17ff212fd3024b0186635b16d2e259066dea4ed2"
+}

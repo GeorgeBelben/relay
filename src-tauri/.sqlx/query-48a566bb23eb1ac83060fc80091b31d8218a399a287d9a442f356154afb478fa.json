@@ -1,0 +1,122 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, system_id, path, crc32, size_bytes, discs, status,\n                  created_at as \"created_at!: i64\", updated_at as \"updated_at!: i64\"\n           FROM roms ORDER BY path",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "system_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "system_id"
+          }
+        }
+      },
+      {
+        "name": "path",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "path"
+          }
+        }
+      },
+      {
+        "name": "crc32",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "crc32"
+          }
+        }
+      },
+      {
+        "name": "size_bytes",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "size_bytes"
+          }
+        }
+      },
+      {
+        "name": "discs",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "discs"
+          }
+        }
+      },
+      {
+        "name": "status",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "name": "created_at!: i64",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "name": "updated_at!: i64",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "roms",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "48a566bb23eb1ac83060fc80091b31d8218a399a287d9a442f356154afb478fa"
+}

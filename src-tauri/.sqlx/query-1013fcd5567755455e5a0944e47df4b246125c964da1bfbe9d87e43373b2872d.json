@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT profile_id, points as \"points!: i64\", rank, recent_unlocks_json,\n                  refreshed_at as \"refreshed_at!: i64\"\n           FROM ra_stats WHERE profile_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "profile_id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "profile_id"
+          }
+        }
+      },
+      {
+        "name": "points!: i64",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "points"
+          }
+        }
+      },
+      {
+        "name": "rank",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "rank"
+          }
+        }
+      },
+      {
+        "name": "recent_unlocks_json",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "recent_unlocks_json"
+          }
+        }
+      },
+      {
+        "name": "refreshed_at!: i64",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ra_stats",
+            "name": "refreshed_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1013fcd5567755455e5a0944e47df4b246125c964da1bfbe9d87e43373b2872d"
+}

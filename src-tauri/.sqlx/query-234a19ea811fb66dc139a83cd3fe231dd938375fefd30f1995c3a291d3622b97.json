@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, name, extensions, retroarch_core, standalone_binary FROM systems ORDER BY name",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "extensions",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "extensions"
+          }
+        }
+      },
+      {
+        "name": "retroarch_core",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "retroarch_core"
+          }
+        }
+      },
+      {
+        "name": "standalone_binary",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "standalone_binary"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "234a19ea811fb66dc139a83cd3fe231dd938375fefd30f1995c3a291d3622b97"
+}

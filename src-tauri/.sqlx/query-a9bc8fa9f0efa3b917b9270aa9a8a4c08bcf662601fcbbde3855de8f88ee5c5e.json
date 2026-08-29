@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, name, ra_username, ra_web_api_key_encrypted, ra_token_encrypted,\n                  created_at as \"created_at!: i64\", updated_at as \"updated_at!: i64\"\n           FROM profiles WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "ra_username",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "ra_username"
+          }
+        }
+      },
+      {
+        "name": "ra_web_api_key_encrypted",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "ra_web_api_key_encrypted"
+          }
+        }
+      },
+      {
+        "name": "ra_token_encrypted",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "ra_token_encrypted"
+          }
+        }
+      },
+      {
+        "name": "created_at!: i64",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "name": "updated_at!: i64",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "a9bc8fa9f0efa3b917b9270aa9a8a4c08bcf662601fcbbde3855de8f88ee5c5e"
+}
