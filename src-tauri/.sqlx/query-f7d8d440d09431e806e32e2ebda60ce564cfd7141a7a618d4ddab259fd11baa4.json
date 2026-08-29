@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE roms SET status = 'missing'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "f7d8d440d09431e806e32e2ebda60ce564cfd7141a7a618d4ddab259fd11baa4"
+}

@@ -85,6 +85,41 @@ pub async fn create(pool: &SqlitePool, new: NewGame) -> Result<Game, sqlx::Error
     .await
 }
 
+/// Insert-or-update keyed on `rom_id` (unique) -- a rescan always re-upserts the game for every
+/// rom it finds. `scanned_title` always tracks the current filename-derived title, but `title`
+/// itself is only overwritten while the game hasn't been SteamGridDB-matched yet: once matched,
+/// `title` comes from SteamGridDB, and a routine rescan shouldn't stomp that back to a filename
+/// guess. Ported from the Electron MVP's `gamesRepository.upsertForRom`.
+pub async fn upsert_for_rom(pool: &SqlitePool, rom_id: &str, title: &str) -> Result<Game, sqlx::Error> {
+    let id = nanoid::nanoid!();
+    let now = now_unix();
+    sqlx::query_as!(
+        Game,
+        r#"INSERT INTO games (id, rom_id, title, scanned_title, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT (rom_id) DO UPDATE SET
+             title = CASE WHEN steamgriddb_id IS NULL THEN excluded.title ELSE title END,
+             scanned_title = excluded.scanned_title,
+             updated_at = excluded.updated_at
+           RETURNING id, rom_id, title, scanned_title,
+                     steamgriddb_id as "steamgriddb_id: i64",
+                     match_confidence,
+                     enriched_at as "enriched_at: i64",
+                     retroachievements_game_id as "retroachievements_game_id: i64",
+                     retroachievements_matched_at as "retroachievements_matched_at: i64",
+                     ra_highest_award_kind,
+                     created_at as "created_at!: i64", updated_at as "updated_at!: i64""#,
+        id,
+        rom_id,
+        title,
+        title,
+        now,
+        now,
+    )
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn update(pool: &SqlitePool, id: &str, title: &str) -> Result<Game, sqlx::Error> {
     let now = now_unix();
     sqlx::query_as!(

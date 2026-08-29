@@ -40,10 +40,14 @@ pub fn run() {
 
                 app_handle.manage(pool);
             });
+            app.manage(commands::ingestion::RescanGuard::default());
+            app.manage(commands::ingestion::ScanStatusState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             greet,
+            commands::ingestion::rescan_library,
+            commands::ingestion::get_scan_status,
             commands::games::list_games,
             commands::games::get_game,
             commands::games::create_game,
