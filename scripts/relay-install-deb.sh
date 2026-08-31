@@ -10,4 +10,8 @@ if [ -z "$DEB" ]; then
   exit 1
 fi
 
-dpkg -i "$DEB"
+# `apt install ./file.deb` doesn't reliably resolve local-file dependencies on this
+# system (apt reports them as "not going to be installed" despite valid candidates).
+# dpkg -i followed by apt --fix-broken install is the standard robust recipe instead.
+dpkg -i "$DEB" || true
+apt-get install -f -y
