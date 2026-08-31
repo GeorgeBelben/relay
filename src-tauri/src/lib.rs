@@ -44,6 +44,14 @@ pub fn run() {
             app.manage(commands::ingestion::RescanGuard::default());
             app.manage(commands::ingestion::ScanStatusState::default());
             app.manage(commands::emulator::LauncherState::default());
+
+            // Kiosk has no mouse input; hide the cursor and only reveal the window once it's
+            // hidden, so there's never a frame with GTK's default arrow visible (see main.css's
+            // `cursor: none`, which can't take effect until the page's own CSS has loaded).
+            let window = app.get_webview_window("main").expect("main window must exist");
+            window.set_cursor_visible(false)?;
+            window.show()?;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
