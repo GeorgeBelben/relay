@@ -9,7 +9,7 @@ import { ProfileSwitcher } from "./profile-switcher";
 export function Header() {
   return (
     <header className="flex items-center justify-between px-16 py-8">
-      <Logo />
+      <Logo className="w-8" />
 
       <div className="flex items-center gap-4">
         <ControllerIndicator />
