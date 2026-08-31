@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE games SET retroachievements_game_id = 99 WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "b1b9b24d80ea68777231c437fb616019d51d70466a80a58e42b302125885ca71"
+}

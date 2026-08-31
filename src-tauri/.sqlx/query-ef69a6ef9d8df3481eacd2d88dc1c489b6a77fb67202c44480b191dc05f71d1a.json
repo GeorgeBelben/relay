@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE games SET ra_highest_award_kind = 'beaten-softcore' WHERE id = 'g1'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "ef69a6ef9d8df3481eacd2d88dc1c489b6a77fb67202c44480b191dc05f71d1a"
+}

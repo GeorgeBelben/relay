@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE games SET title = 'Wrong Game', scanned_title = 'chrono trigger (usa)' WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "875921ba64cdd77abc65066da4b35ac62c8bd08cd622c9e12e0dc02f5451b47e"
+}

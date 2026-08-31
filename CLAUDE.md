@@ -44,11 +44,11 @@ This repo is a **ground-up rewrite** from Electron to **Tauri v2 + Rust**, with 
 ```bash
 cargo tauri dev      # dev mode — React hot-reloads, Rust changes need a restart
 cargo tauri build     # release build
-cargo sqlx prepare    # regenerate offline query metadata (needed after schema changes, before commit)
+cargo sqlx prepare -- --tests   # regenerate offline query metadata (needed after adding/changing any query! macro, before commit)
 cargo test            # Rust unit/integration tests
 ```
 
-sqlx's `query!` macros check against a live DB at compile time. If you change the schema, run a migration locally, then `cargo sqlx prepare` before committing so CI and fresh clones don't need a live DB.
+sqlx's `query!` macros check against a live DB at compile time. If you add or change a query (including a raw `sqlx::query!` inside a `#[cfg(test)]` module — test-seed helpers count), run `cargo sqlx prepare -- --tests` before committing so CI and fresh clones don't need a live DB. **The `-- --tests` matters**: plain `cargo sqlx prepare` only captures queries reachable from the lib/bin, not ones used only inside test modules — `cargo build` will pass locally either way (tests aren't compiled), but CI's `cargo test` step will fail on missing cache entries. Verify with `DATABASE_URL` unset and `SQLX_OFFLINE=true cargo test` locally before pushing — that's the only way to actually catch this before CI does.
 
 ## Working conventions
 

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO systems (id, name, extensions) VALUES (?, ?, '[]')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "f8f5c2d2c227fe0cbebc30c51e71fccd79fa55ab151b6897019f4728b05994bd"
+}
