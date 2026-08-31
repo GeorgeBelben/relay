@@ -66,6 +66,14 @@ pub fn run() {
             window.set_cursor_visible(false)?;
             window.show()?;
 
+            // Dev runs in a normal windowed desktop, not the kiosk's cage compositor -- fullscreen
+            // there is just a convenience. Never applied in a release build: requesting native
+            // fullscreen at window *creation* (tauri.conf.json's `fullscreen`) is what crashes
+            // cage/wlroots on the real kiosk device (see CLAUDE.md's Key Decisions table); toggling
+            // it post-creation, gated to debug builds only, never touches that path.
+            #[cfg(debug_assertions)]
+            window.set_fullscreen(true)?;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
