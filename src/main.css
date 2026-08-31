@@ -28,10 +28,12 @@ body {
 }
 
 /* Controller-only kiosk, no mouse -- scrollbars have no reason to ever be visible. Scrolling
-   still works everywhere, just without the track/thumb chrome. */
+   still works everywhere, just without the track/thumb chrome. Cursor is hidden for the same
+   reason: nothing ever moves it, so a stray arrow just sits on screen looking like a bug. */
 * {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  cursor: none;
 }
 
 *::-webkit-scrollbar {
