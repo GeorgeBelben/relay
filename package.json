@@ -10,7 +10,8 @@
     "test": "vitest run",
     "lint": "oxlint",
     "fmt": "oxfmt",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
