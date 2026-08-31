@@ -43,6 +43,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SQLX_OFFLINE: "true"
+          # Signs the update artifact tauri-action generates (createUpdaterArtifacts in
+          # tauri.conf.json) so the updater plugin's pubkey can verify it -- set via
+          # `gh secret set` from the keypair at ~/.tauri/relay-updater.key, never committed.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Relay ${{ github.ref_name }}"

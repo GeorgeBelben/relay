@@ -26,6 +26,7 @@
   "bundle": {
     "active": true,
     "targets": ["deb"],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -33,5 +34,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFCRkQ0RTAxMkU0RDE3QjMKUldTekYwMHVBVTc5cTJIK0FVM2IwYU5MTzBlYkkwVi9ONnVCd1NWbnJMYWx1QnVxZjBMTk91VEwK",
+      "endpoints": ["https://github.com/GeorgeBelben/relay/releases/latest/download/latest.json"]
+    }
   }
 }
