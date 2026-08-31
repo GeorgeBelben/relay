@@ -1,5 +1,6 @@
 pub mod bluetooth;
 pub mod emulator;
+pub mod game_actions;
 pub mod game_media;
 pub mod games;
 pub mod ingestion;

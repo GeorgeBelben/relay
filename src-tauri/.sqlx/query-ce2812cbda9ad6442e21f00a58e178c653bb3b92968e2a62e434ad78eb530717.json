@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO game_media (id, game_id, kind, local_path, source_url, created_at)\n           VALUES (?, ?, 'boxart', ?, ?, ?)\n           ON CONFLICT (game_id, kind) DO UPDATE SET\n             local_path = excluded.local_path,\n             source_url = excluded.source_url,\n             created_at = excluded.created_at\n           RETURNING id, game_id, kind, local_path, source_url, created_at as \"created_at!: i64\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "game_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "game_id"
+          }
+        }
+      },
+      {
+        "name": "kind",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "local_path",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "local_path"
+          }
+        }
+      },
+      {
+        "name": "source_url",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "source_url"
+          }
+        }
+      },
+      {
+        "name": "created_at!: i64",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "ce2812cbda9ad6442e21f00a58e178c653bb3b92968e2a62e434ad78eb530717"
+}

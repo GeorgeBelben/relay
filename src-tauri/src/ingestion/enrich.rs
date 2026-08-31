@@ -117,7 +117,10 @@ pub async fn enrich_one(
 /// a URL later, not passed straight to the filesystem. The timestamped filename matters: a
 /// re-download that reused a fixed name would leave an `<img>`'s `src` unchanged across a swap,
 /// and browsers only refetch an image when `src` actually changes.
-async fn download_boxart(http: &reqwest::Client, url: &str, dest_dir: &Path, media_root: &Path) -> Result<String, EnrichError> {
+///
+/// `pub(crate)` rather than private: `game_actions::apply_match` (a manual re-match, not part of
+/// the automatic enrichment pipeline) reuses this rather than duplicating the download logic.
+pub(crate) async fn download_boxart(http: &reqwest::Client, url: &str, dest_dir: &Path, media_root: &Path) -> Result<String, EnrichError> {
     let res = http.get(url).send().await?.error_for_status()?;
     let bytes = res.bytes().await?;
 

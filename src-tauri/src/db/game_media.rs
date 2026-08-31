@@ -61,6 +61,34 @@ pub async fn create(pool: &SqlitePool, new: NewGameMedia) -> Result<GameMedia, s
     .await
 }
 
+/// Insert-or-replace keyed on the table's `(game_id, kind)` unique constraint -- unlike `create`
+/// above (a plain insert, correct for the automatic enrichment pipeline's one-shot-per-game call
+/// site), this is what a manual re-match (`game_actions::apply_match`) needs: applying a
+/// *different* box art to an already-enriched game must replace its existing boxart row, not
+/// collide with the unique constraint or leave the old row orphaned. Ported from the Electron
+/// MVP's `gameMediaRepository.upsertBoxart`.
+pub async fn upsert_boxart(pool: &SqlitePool, game_id: &str, local_path: &str, source_url: &str) -> Result<GameMedia, sqlx::Error> {
+    let id = nanoid::nanoid!();
+    let now = now_unix();
+    sqlx::query_as!(
+        GameMedia,
+        r#"INSERT INTO game_media (id, game_id, kind, local_path, source_url, created_at)
+           VALUES (?, ?, 'boxart', ?, ?, ?)
+           ON CONFLICT (game_id, kind) DO UPDATE SET
+             local_path = excluded.local_path,
+             source_url = excluded.source_url,
+             created_at = excluded.created_at
+           RETURNING id, game_id, kind, local_path, source_url, created_at as "created_at!: i64""#,
+        id,
+        game_id,
+        local_path,
+        source_url,
+        now,
+    )
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn delete(pool: &SqlitePool, id: &str) -> Result<(), sqlx::Error> {
     sqlx::query!("DELETE FROM game_media WHERE id = ?", id)
         .execute(pool)

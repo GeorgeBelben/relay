@@ -48,6 +48,7 @@ impl From<reqwest::Error> for SteamGridDbError {
     }
 }
 
+#[derive(Clone)]
 pub struct SteamGridDbClient {
     http: reqwest::Client,
     base_url: reqwest::Url,

@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod db;
 pub mod emulator;
+pub mod game_actions;
 pub mod ingestion;
 pub mod system;
 
@@ -103,6 +104,8 @@ pub fn run() {
             commands::library::list_library_shelves,
             commands::library::list_all_games_in_library,
             commands::library::list_recently_added_games,
+            commands::game_actions::search_alternate_matches,
+            commands::game_actions::apply_match,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
