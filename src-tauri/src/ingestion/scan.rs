@@ -17,6 +17,15 @@ pub enum ScanTarget {
     },
 }
 
+// Filters out dotfiles -- most importantly macOS's AppleDouble sidecar files (`._Some Game.gb`),
+// which get silently created alongside every real file when copying a ROM library onto a
+// non-HFS+ filesystem (SMB, exFAT, a plain USB stick) from a Mac, and otherwise match the real
+// file's own extension exactly, indexing as a second bogus, near-duplicate game per real one.
+// `.DS_Store` and friends are caught the same way, on general "hidden file" principle.
+fn is_hidden(name: &str) -> bool {
+    name.starts_with('.')
+}
+
 /// Walks one system's rom folder (one level deep) and returns candidate scan targets.
 ///
 /// A system folder contains either loose rom files matching `extensions` (compared
@@ -37,6 +46,10 @@ pub async fn walk_system_folder(system_folder: &Path, extensions: &[&str]) -> Ve
             continue;
         };
         let entry_path = entry.path();
+
+        if is_hidden(&entry.file_name().to_string_lossy()) {
+            continue;
+        }
 
         if file_type.is_file() {
             let matches_extension = entry_path
@@ -73,7 +86,11 @@ async fn read_multi_disc_folder(folder_path: &Path) -> Option<ScanTarget> {
         if !is_file {
             continue;
         }
-        if entry.file_name().to_string_lossy().to_lowercase().ends_with(".m3u") {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if is_hidden(&name) {
+            continue;
+        }
+        if name.to_lowercase().ends_with(".m3u") {
             m3u_path = Some(entry.path());
             break;
         }
@@ -108,6 +125,45 @@ mod tests {
 
         let targets = walk_system_folder(&missing, &["nes"]).await;
         assert!(targets.is_empty());
+    }
+
+    #[tokio::test]
+    async fn skips_macos_appledouble_sidecar_files() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("Pokemon - Red Version.gb"), "real-rom-bytes").unwrap();
+        // The exact AppleDouble naming macOS produces copying onto a non-HFS+ filesystem --
+        // same extension as the real file, so only the leading dot distinguishes it.
+        fs::write(dir.path().join("._Pokemon - Red Version.gb"), "resource-fork-junk").unwrap();
+
+        let targets = walk_system_folder(dir.path(), &["gb"]).await;
+
+        assert_eq!(targets.len(), 1);
+        match &targets[0] {
+            ScanTarget::Single { file_path, .. } => {
+                assert_eq!(file_path.file_name().unwrap(), "Pokemon - Red Version.gb");
+            }
+            other => panic!("expected Single, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn skips_an_appledouble_sidecar_for_a_multi_disc_m3u() {
+        let dir = tempfile::tempdir().unwrap();
+        let game_dir = dir.path().join("Chrono Cross (USA)");
+        fs::create_dir(&game_dir).unwrap();
+        fs::write(game_dir.join("Chrono Cross.m3u"), "Chrono Cross (Disc 1).cue\n").unwrap();
+        // A hidden sidecar for the playlist itself -- must not be mistaken for the real m3u.
+        fs::write(game_dir.join("._Chrono Cross.m3u"), "junk").unwrap();
+
+        let targets = walk_system_folder(dir.path(), &["cue"]).await;
+
+        assert_eq!(targets.len(), 1);
+        match &targets[0] {
+            ScanTarget::MultiDisc { m3u_path, .. } => {
+                assert_eq!(m3u_path.file_name().unwrap(), "Chrono Cross.m3u");
+            }
+            other => panic!("expected MultiDisc, got {other:?}"),
+        }
     }
 
     #[tokio::test]
