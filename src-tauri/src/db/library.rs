@@ -1,6 +1,8 @@
 use serde::Serialize;
 use sqlx::SqlitePool;
 
+use crate::systems;
+
 /// Ready-to-render library data -- one row per playable game (its file still present at the last
 /// scan), joined with its system and (if any) box art. `boxart_path` is forward-slash-relative to
 /// the media root (see `commands::game_media::get_media_root_path`) -- resolving it into something
@@ -32,7 +34,6 @@ struct LibraryGameRow {
     id: String,
     title: String,
     system_id: String,
-    system_name: String,
     boxart_path: Option<String>,
     ra_highest_award_kind: Option<String>,
     created_at: i64,
@@ -40,11 +41,14 @@ struct LibraryGameRow {
 
 impl From<LibraryGameRow> for LibraryGame {
     fn from(row: LibraryGameRow) -> Self {
+        // Falls back to the raw id for a rom whose system_id doesn't match anything in the fixed
+        // catalog -- shouldn't happen for data this app itself wrote, but display beats a panic.
+        let system_name = systems::get(&row.system_id).map(|s| s.name.to_string()).unwrap_or_else(|| row.system_id.clone());
         LibraryGame {
             id: row.id,
             title: row.title,
             system_id: row.system_id,
-            system_name: row.system_name,
+            system_name,
             boxart_path: row.boxart_path,
             beaten: row.ra_highest_award_kind.is_some(),
             added_at: row.created_at,
@@ -52,22 +56,21 @@ impl From<LibraryGameRow> for LibraryGame {
     }
 }
 
-/// One shelf per system with at least one scanned game, in the order the query already sorts
-/// them (system name, then title) -- backs the Home screen.
+/// One shelf per system with at least one scanned game, sorted by system display name (resolved
+/// against the fixed catalog, not the DB -- see `systems::get`) then title within each shelf.
 pub async fn list_shelves(pool: &SqlitePool) -> Result<Vec<LibraryShelf>, sqlx::Error> {
     let rows = sqlx::query_as!(
         LibraryGameRow,
         r#"SELECT games.id, games.title,
-                  systems.id as system_id, systems.name as system_name,
+                  roms.system_id as "system_id!",
                   game_media.local_path as boxart_path,
                   games.ra_highest_award_kind,
                   games.created_at as "created_at!: i64"
            FROM games
            JOIN roms ON games.rom_id = roms.id
-           JOIN systems ON roms.system_id = systems.id
            LEFT JOIN game_media ON game_media.game_id = games.id AND game_media.kind = 'boxart'
            WHERE roms.status = 'ok'
-           ORDER BY systems.name, games.title"#
+           ORDER BY games.title"#
     )
     .fetch_all(pool)
     .await?;
@@ -84,6 +87,7 @@ pub async fn list_shelves(pool: &SqlitePool) -> Result<Vec<LibraryShelf>, sqlx::
             }),
         }
     }
+    shelves.sort_by(|a, b| a.system_name.cmp(&b.system_name));
     Ok(shelves)
 }
 
@@ -92,13 +96,12 @@ pub async fn list_all_games(pool: &SqlitePool) -> Result<Vec<LibraryGame>, sqlx:
     let rows = sqlx::query_as!(
         LibraryGameRow,
         r#"SELECT games.id, games.title,
-                  systems.id as system_id, systems.name as system_name,
+                  roms.system_id as "system_id!",
                   game_media.local_path as boxart_path,
                   games.ra_highest_award_kind,
                   games.created_at as "created_at!: i64"
            FROM games
            JOIN roms ON games.rom_id = roms.id
-           JOIN systems ON roms.system_id = systems.id
            LEFT JOIN game_media ON game_media.game_id = games.id AND game_media.kind = 'boxart'
            WHERE roms.status = 'ok'
            ORDER BY games.title"#
@@ -115,13 +118,12 @@ pub async fn list_recently_added(pool: &SqlitePool, limit: i64) -> Result<Vec<Li
     let rows = sqlx::query_as!(
         LibraryGameRow,
         r#"SELECT games.id, games.title,
-                  systems.id as system_id, systems.name as system_name,
+                  roms.system_id as "system_id!",
                   game_media.local_path as boxart_path,
                   games.ra_highest_award_kind,
                   games.created_at as "created_at!: i64"
            FROM games
            JOIN roms ON games.rom_id = roms.id
-           JOIN systems ON roms.system_id = systems.id
            LEFT JOIN game_media ON game_media.game_id = games.id AND game_media.kind = 'boxart'
            WHERE roms.status = 'ok'
            ORDER BY games.created_at DESC
@@ -145,17 +147,6 @@ mod tests {
         let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(options).await.unwrap();
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();
         (pool, dir)
-    }
-
-    async fn seed_system(pool: &SqlitePool, id: &str, name: &str) {
-        sqlx::query!(
-            "INSERT INTO systems (id, name, extensions) VALUES (?, ?, '[]')",
-            id,
-            name
-        )
-        .execute(pool)
-        .await
-        .unwrap();
     }
 
     async fn seed_rom(pool: &SqlitePool, id: &str, system_id: &str, path: &str, status: &str) {
@@ -192,8 +183,6 @@ mod tests {
     #[tokio::test]
     async fn list_shelves_groups_games_by_system_excluding_missing_roms() {
         let (pool, _dir) = throwaway_pool().await;
-        seed_system(&pool, "nes", "NES").await;
-        seed_system(&pool, "snes", "SNES").await;
         seed_rom(&pool, "r1", "nes", "mario.nes", "ok").await;
         seed_rom(&pool, "r2", "snes", "zelda.sfc", "ok").await;
         seed_rom(&pool, "r3", "nes", "missing.nes", "missing").await;
@@ -214,7 +203,6 @@ mod tests {
     #[tokio::test]
     async fn list_all_games_is_alphabetical_by_title() {
         let (pool, _dir) = throwaway_pool().await;
-        seed_system(&pool, "nes", "NES").await;
         seed_rom(&pool, "r1", "nes", "z.nes", "ok").await;
         seed_rom(&pool, "r2", "nes", "a.nes", "ok").await;
         seed_game(&pool, "g1", "r1", "Zelda", 1).await;
@@ -228,7 +216,6 @@ mod tests {
     #[tokio::test]
     async fn list_recently_added_is_newest_first_and_respects_limit() {
         let (pool, _dir) = throwaway_pool().await;
-        seed_system(&pool, "nes", "NES").await;
         seed_rom(&pool, "r1", "nes", "a.nes", "ok").await;
         seed_rom(&pool, "r2", "nes", "b.nes", "ok").await;
         seed_rom(&pool, "r3", "nes", "c.nes", "ok").await;
@@ -244,7 +231,6 @@ mod tests {
     #[tokio::test]
     async fn beaten_is_true_once_ra_highest_award_kind_is_set() {
         let (pool, _dir) = throwaway_pool().await;
-        seed_system(&pool, "nes", "NES").await;
         seed_rom(&pool, "r1", "nes", "a.nes", "ok").await;
         seed_game(&pool, "g1", "r1", "Beaten Game", 1).await;
         sqlx::query!("UPDATE games SET ra_highest_award_kind = 'beaten-softcore' WHERE id = 'g1'")

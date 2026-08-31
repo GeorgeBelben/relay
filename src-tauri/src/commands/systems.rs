@@ -1,54 +1,36 @@
-use sqlx::SqlitePool;
-use tauri::State;
+use serde::Serialize;
 
-use crate::db::systems::{self, NewSystem, System};
+use crate::systems::{self, SystemDef};
 
-#[tauri::command]
-pub async fn list_systems(pool: State<'_, SqlitePool>) -> Result<Vec<System>, String> {
-    systems::list(pool.inner()).await.map_err(crate::logging::err_to_string)
+/// Wire type mirroring `systems::SystemDef` -- Tauri's IPC needs an owned, `Serialize` value, not
+/// the `'static` borrowed catalog entries themselves.
+#[derive(Debug, Serialize)]
+pub struct System {
+    pub id: String,
+    pub name: String,
+    pub extensions: Vec<String>,
+    pub retroarch_core: Option<String>,
+    pub standalone_binary: Option<String>,
+}
+
+impl From<&SystemDef> for System {
+    fn from(def: &SystemDef) -> Self {
+        System {
+            id: def.id.to_string(),
+            name: def.name.to_string(),
+            extensions: def.extensions.iter().map(|e| e.to_string()).collect(),
+            retroarch_core: def.retroarch_core.map(str::to_string),
+            standalone_binary: def.standalone_binary.map(str::to_string),
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn get_system(pool: State<'_, SqlitePool>, id: String) -> Result<Option<System>, String> {
-    systems::get(pool.inner(), &id).await.map_err(crate::logging::err_to_string)
+pub fn list_systems() -> Vec<System> {
+    systems::ALL.iter().map(System::from).collect()
 }
 
 #[tauri::command]
-pub async fn create_system(
-    pool: State<'_, SqlitePool>,
-    id: String,
-    name: String,
-    extensions: String,
-    retroarch_core: Option<String>,
-    standalone_binary: Option<String>,
-) -> Result<System, String> {
-    systems::create(
-        pool.inner(),
-        NewSystem { id, name, extensions, retroarch_core, standalone_binary },
-    )
-    .await
-    .map_err(crate::logging::err_to_string)
-}
-
-#[tauri::command]
-pub async fn update_system(
-    pool: State<'_, SqlitePool>,
-    id: String,
-    name: String,
-    extensions: String,
-    retroarch_core: Option<String>,
-    standalone_binary: Option<String>,
-) -> Result<System, String> {
-    systems::update(
-        pool.inner(),
-        &id,
-        NewSystem { id: id.clone(), name, extensions, retroarch_core, standalone_binary },
-    )
-    .await
-    .map_err(crate::logging::err_to_string)
-}
-
-#[tauri::command]
-pub async fn delete_system(pool: State<'_, SqlitePool>, id: String) -> Result<(), String> {
-    systems::delete(pool.inner(), &id).await.map_err(crate::logging::err_to_string)
+pub fn get_system(id: String) -> Option<System> {
+    systems::get(&id).map(System::from)
 }

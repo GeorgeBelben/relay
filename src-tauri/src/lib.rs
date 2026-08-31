@@ -7,6 +7,7 @@ pub mod logging;
 pub mod retroachievements;
 pub mod secrets;
 pub mod system;
+pub mod systems;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use tauri::Manager;
@@ -95,9 +96,6 @@ pub fn run() {
             commands::roms::delete_rom,
             commands::systems::list_systems,
             commands::systems::get_system,
-            commands::systems::create_system,
-            commands::systems::update_system,
-            commands::systems::delete_system,
             commands::settings::get_setting,
             commands::settings::set_setting,
             commands::settings::get_general_settings,

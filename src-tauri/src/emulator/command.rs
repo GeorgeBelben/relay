@@ -17,9 +17,9 @@ pub struct RetroarchOptions {
     pub append_config_path: PathBuf,
 }
 
-/// `retroarch_core`/`standalone_binary` mirror `db::systems::System`'s two mutually-exclusive
+/// `retroarch_core`/`standalone_binary` mirror `systems::SystemDef`'s two mutually-exclusive
 /// fields directly -- kept as a separate, minimal struct here so this module doesn't depend on
-/// `db` for a pure function that only ever reads two fields off it.
+/// the fixed system catalog for a pure function that only ever reads two fields off it.
 pub struct SystemLaunchConfig<'a> {
     pub retroarch_core: Option<&'a str>,
     pub standalone_binary: Option<&'a str>,

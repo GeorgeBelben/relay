@@ -1,20 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
+// The systems Relay supports (NES, SNES, etc.) are a fixed set defined in Rust code
+// (src-tauri/src/systems.rs), not user-editable data -- these are read-only queries, no
+// create/update/delete.
 export type System = {
   id: string;
   name: string;
-  extensions: string;
+  extensions: string[];
   retroarch_core: string | null;
   standalone_binary: string | null;
-};
-
-export type NewSystem = {
-  id: string;
-  name: string;
-  extensions: string;
-  retroarchCore: string | null;
-  standaloneBinary: string | null;
 };
 
 const systemsKey = ["systems"] as const;
@@ -30,35 +25,5 @@ export function useSystem(id: string) {
   return useQuery({
     queryKey: [...systemsKey, id],
     queryFn: () => invoke<System | null>("get_system", { id }),
-  });
-}
-
-export function useCreateSystem() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (system: NewSystem) => invoke<System>("create_system", system),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: systemsKey });
-    },
-  });
-}
-
-export function useUpdateSystem() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (system: NewSystem) => invoke<System>("update_system", system),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: systemsKey });
-    },
-  });
-}
-
-export function useDeleteSystem() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => invoke<void>("delete_system", { id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: systemsKey });
-    },
   });
 }

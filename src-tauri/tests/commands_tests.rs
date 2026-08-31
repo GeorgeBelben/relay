@@ -33,42 +33,27 @@ fn invoke_request(cmd: &str, args: Value) -> InvokeRequest {
 }
 
 #[tokio::test]
-async fn create_system_command_accepts_camel_case_args() {
-    let (pool, _dir) = throwaway_pool().await;
-
+async fn systems_commands_are_registered_and_reachable_through_ipc() {
     let app = mock_builder()
-        .invoke_handler(tauri::generate_handler![
-            commands::systems::create_system,
-            commands::systems::get_system,
-        ])
+        .invoke_handler(tauri::generate_handler![commands::systems::list_systems, commands::systems::get_system])
         .build(mock_context(noop_assets()))
         .expect("failed to build mock app");
-    app.manage(pool);
 
     let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
 
-    let create_res = get_ipc_response(
-        &webview,
-        invoke_request(
-            "create_system",
-            json!({
-                "id": "nes",
-                "name": "NES",
-                "extensions": "[\"nes\"]",
-                "retroarchCore": "mesen",
-                "standaloneBinary": null,
-            }),
-        ),
-    );
-    let created: Value = create_res.expect("create_system should succeed").deserialize().unwrap();
-    assert_eq!(created["id"], "nes");
-    assert_eq!(created["retroarch_core"], "mesen");
+    let list_res = get_ipc_response(&webview, invoke_request("list_systems", json!({})));
+    let all: Value = list_res.expect("list_systems should succeed").deserialize().unwrap();
+    assert!(all.as_array().unwrap().iter().any(|s| s["id"] == "nes"));
 
     let get_res = get_ipc_response(&webview, invoke_request("get_system", json!({ "id": "nes" })));
     let fetched: Value = get_res.expect("get_system should succeed").deserialize().unwrap();
     assert_eq!(fetched["name"], "NES");
+
+    let missing_res = get_ipc_response(&webview, invoke_request("get_system", json!({ "id": "not-a-real-system" })));
+    let missing: Value = missing_res.expect("get_system should succeed").deserialize().unwrap();
+    assert!(missing.is_null());
 }
 
 #[tokio::test]
@@ -77,7 +62,6 @@ async fn create_rom_and_game_commands_accept_camel_case_args() {
 
     let app = mock_builder()
         .invoke_handler(tauri::generate_handler![
-            commands::systems::create_system,
             commands::roms::create_rom,
             commands::games::create_game,
             commands::games::list_games,
@@ -89,15 +73,6 @@ async fn create_rom_and_game_commands_accept_camel_case_args() {
     let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
-
-    get_ipc_response(
-        &webview,
-        invoke_request(
-            "create_system",
-            json!({ "id": "snes", "name": "SNES", "extensions": "[\"sfc\"]", "retroarchCore": null, "standaloneBinary": null }),
-        ),
-    )
-    .expect("create_system should succeed");
 
     let rom_res = get_ipc_response(
         &webview,
@@ -169,24 +144,20 @@ async fn settings_commands_round_trip_through_ipc() {
 async fn launch_game_command_spawns_via_the_real_ipc_boundary_and_reports_status() {
     let (pool, _dir) = throwaway_pool().await;
 
-    // "true" stands in for a real emulator binary -- exists on every Unix dev/CI machine, exits
-    // 0 immediately regardless of arguments, so this proves the full DB-lookup -> build-command ->
-    // spawn -> status pipeline without needing a real RetroArch/PCSX2/Dolphin install.
-    relay_lib::db::systems::create(
-        &pool,
-        relay_lib::db::systems::NewSystem {
-            id: "snes".into(),
-            name: "SNES".into(),
-            extensions: r#"["sfc"]"#.into(),
-            retroarch_core: None,
-            standalone_binary: Some("true".into()),
-        },
-    )
-    .await
-    .unwrap();
+    // "gamecube" resolves to the fixed catalog's "dolphin-emu" standalone binary (systems.rs),
+    // which isn't installed on a dev/CI machine -- so this proves the full DB-lookup ->
+    // catalog-lookup -> build-command -> spawn -> status pipeline via a real ENOENT rather than a
+    // successful exit, since the system catalog is no longer DB-seeded and so can't be pointed at
+    // a stand-in binary like "true" the way it could when systems were rows.
     let rom = relay_lib::db::roms::create(
         &pool,
-        relay_lib::db::roms::NewRom { system_id: "snes".into(), path: "snes/game.sfc".into(), crc32: None, size_bytes: None, discs: None },
+        relay_lib::db::roms::NewRom {
+            system_id: "gamecube".into(),
+            path: "gamecube/game.iso".into(),
+            crc32: None,
+            size_bytes: None,
+            discs: None,
+        },
     )
     .await
     .unwrap();
@@ -207,14 +178,13 @@ async fn launch_game_command_spawns_via_the_real_ipc_boundary_and_reports_status
     let webview = WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
 
     let launch_res = get_ipc_response(&webview, invoke_request("launch_game", json!({ "gameId": game.id })));
-    assert!(launch_res.is_ok(), "launch_game failed: {:?}", launch_res);
+    assert!(launch_res.is_err(), "expected launch_game to fail: dolphin-emu isn't installed");
 
-    // launch_game awaits the whole process lifecycle before resolving (matching
-    // ingestion::pipeline::rescan's precedent), so by the time it returns, "true" has already
-    // exited and get_launcher_status should reflect the final state.
+    // The status callback fires before launch_game's error propagates, so it should already
+    // reflect the real spawn failure.
     let status_res = get_ipc_response(&webview, invoke_request("get_launcher_status", json!({})));
     let status: Value = status_res.expect("get_launcher_status should succeed").deserialize().unwrap();
-    assert_eq!(status["state"], "exited");
+    assert_eq!(status["state"], "error");
 
     // Nothing is running any more, so kill_game should report that rather than silently no-op.
     let kill_res = get_ipc_response(&webview, invoke_request("kill_game", json!({})));
@@ -411,18 +381,6 @@ async fn profile_commands_round_trip_through_ipc() {
 async fn game_media_commands_are_reachable_through_ipc() {
     let (pool, _dir) = throwaway_pool().await;
 
-    relay_lib::db::systems::create(
-        &pool,
-        relay_lib::db::systems::NewSystem {
-            id: "nes".into(),
-            name: "NES".into(),
-            extensions: r#"["nes"]"#.into(),
-            retroarch_core: Some("mesen".into()),
-            standalone_binary: None,
-        },
-    )
-    .await
-    .unwrap();
     let rom = relay_lib::db::roms::create(
         &pool,
         relay_lib::db::roms::NewRom { system_id: "nes".into(), path: "nes/game.nes".into(), crc32: None, size_bytes: None, discs: None },

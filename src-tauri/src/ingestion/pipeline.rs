@@ -5,7 +5,8 @@ use std::time::Duration;
 use serde::Serialize;
 use sqlx::SqlitePool;
 
-use crate::db::{games, roms, systems};
+use crate::db::{games, roms};
+use crate::systems;
 
 use super::enrich;
 use super::identify::no_intro::NoIntroDatLookup;
@@ -71,13 +72,11 @@ async fn upsert_rom_and_game(
 /// missing, not deleted. Ported from the Electron MVP's `scanLibrary.ts` (its dev-seed branch is
 /// deliberately not ported -- that's a dev-only convenience, not a pipeline concern).
 pub async fn scan_and_probe(pool: &SqlitePool, roms_root: &Path, no_intro: &NoIntroDatLookup) -> Result<usize, sqlx::Error> {
-    let all_systems = systems::list(pool).await?;
     let mut found_paths = Vec::new();
 
-    for system in &all_systems {
-        let system_folder = roms_root.join(&system.id);
-        let extensions: Vec<String> = serde_json::from_str(&system.extensions).unwrap_or_default();
-        let targets = scan::walk_system_folder(&system_folder, &extensions).await;
+    for system in systems::ALL {
+        let system_folder = roms_root.join(system.id);
+        let targets = scan::walk_system_folder(&system_folder, system.extensions).await;
 
         for target in targets {
             match target {
@@ -94,14 +93,14 @@ pub async fn scan_and_probe(pool: &SqlitePool, roms_root: &Path, no_intro: &NoIn
                     // from whatever the filename happens to look like -- falls back to the
                     // filename-derived title exactly as before on any miss.
                     let title = match &crc32 {
-                        Some(crc) => match no_intro.lookup(&system.id, crc).await {
+                        Some(crc) => match no_intro.lookup(system.id, crc).await {
                             Some(dat_title) => title_from_filename(&dat_title),
                             None => title,
                         },
                         None => title,
                     };
 
-                    upsert_rom_and_game(pool, &system.id, relative, crc32, size_bytes, None, &title).await?;
+                    upsert_rom_and_game(pool, system.id, relative, crc32, size_bytes, None, &title).await?;
                 }
                 ScanTarget::MultiDisc { m3u_path, disc_paths, title } => {
                     let relative = to_forward_slash(m3u_path.strip_prefix(roms_root).unwrap_or(&m3u_path));
@@ -121,7 +120,7 @@ pub async fn scan_and_probe(pool: &SqlitePool, roms_root: &Path, no_intro: &NoIn
                     }
                     let discs_json = if discs.is_empty() { None } else { serde_json::to_string(&discs).ok() };
 
-                    upsert_rom_and_game(pool, &system.id, relative, None, None, discs_json, &title).await?;
+                    upsert_rom_and_game(pool, system.id, relative, None, None, discs_json, &title).await?;
                 }
             }
         }
@@ -198,7 +197,6 @@ async fn run_rescan(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::systems::{self, NewSystem};
     use std::fs;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -219,25 +217,9 @@ mod tests {
         NoIntroDatLookup::with_base_url(tempfile::tempdir().unwrap().keep(), "http://127.0.0.1:1/")
     }
 
-    async fn seed_snes(pool: &SqlitePool) {
-        systems::create(
-            pool,
-            NewSystem {
-                id: "snes".into(),
-                name: "SNES".into(),
-                extensions: r#"["sfc"]"#.into(),
-                retroarch_core: None,
-                standalone_binary: None,
-            },
-        )
-        .await
-        .unwrap();
-    }
-
     #[tokio::test]
     async fn scan_and_probe_creates_roms_and_games_then_marks_vanished_files_missing() {
         let (pool, _db_dir) = throwaway_pool().await;
-        seed_snes(&pool).await;
 
         let roms_root = tempfile::tempdir().unwrap();
         let snes_dir = roms_root.path().join("snes");
@@ -269,7 +251,6 @@ mod tests {
     #[tokio::test]
     async fn rescan_without_api_key_skips_enrichment() {
         let (pool, _db_dir) = throwaway_pool().await;
-        seed_snes(&pool).await;
 
         let roms_root = tempfile::tempdir().unwrap();
         fs::create_dir(roms_root.path().join("snes")).unwrap();
@@ -292,7 +273,6 @@ mod tests {
     #[tokio::test]
     async fn rescan_with_api_key_enriches_and_reports_progress() {
         let (pool, _db_dir) = throwaway_pool().await;
-        seed_snes(&pool).await;
 
         let roms_root = tempfile::tempdir().unwrap();
         fs::create_dir(roms_root.path().join("snes")).unwrap();
@@ -334,7 +314,6 @@ mod tests {
     #[tokio::test]
     async fn rescan_is_a_no_op_while_already_running() {
         let (pool, _db_dir) = throwaway_pool().await;
-        seed_snes(&pool).await;
 
         let roms_root = tempfile::tempdir().unwrap();
         fs::create_dir(roms_root.path().join("snes")).unwrap();

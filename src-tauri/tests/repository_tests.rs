@@ -1,4 +1,4 @@
-use relay_lib::db::{game_media, games, profiles, ra_stats, roms, settings, systems};
+use relay_lib::db::{game_media, games, profiles, ra_stats, roms, settings};
 
 mod common;
 use common::throwaway_pool;
@@ -24,64 +24,8 @@ async fn settings_get_and_set_round_trip() {
 }
 
 #[tokio::test]
-async fn systems_crud_round_trip() {
-    let (pool, _dir) = throwaway_pool().await;
-
-    let created = systems::create(
-        &pool,
-        systems::NewSystem {
-            id: "nes".into(),
-            name: "Nintendo Entertainment System".into(),
-            extensions: r#"["nes"]"#.into(),
-            retroarch_core: Some("mesen".into()),
-            standalone_binary: None,
-        },
-    )
-    .await
-    .unwrap();
-    assert_eq!(created.id, "nes");
-
-    let fetched = systems::get(&pool, "nes").await.unwrap().unwrap();
-    assert_eq!(fetched.name, "Nintendo Entertainment System");
-
-    let updated = systems::update(
-        &pool,
-        "nes",
-        systems::NewSystem {
-            id: "nes".into(),
-            name: "NES".into(),
-            extensions: r#"["nes"]"#.into(),
-            retroarch_core: Some("mesen".into()),
-            standalone_binary: None,
-        },
-    )
-    .await
-    .unwrap();
-    assert_eq!(updated.name, "NES");
-
-    let all = systems::list(&pool).await.unwrap();
-    assert_eq!(all.len(), 1);
-
-    systems::delete(&pool, "nes").await.unwrap();
-    assert!(systems::get(&pool, "nes").await.unwrap().is_none());
-}
-
-#[tokio::test]
 async fn games_relational_chain() {
     let (pool, _dir) = throwaway_pool().await;
-
-    systems::create(
-        &pool,
-        systems::NewSystem {
-            id: "snes".into(),
-            name: "Super Nintendo".into(),
-            extensions: r#"["sfc","smc"]"#.into(),
-            retroarch_core: Some("snes9x".into()),
-            standalone_binary: None,
-        },
-    )
-    .await
-    .unwrap();
 
     let rom = roms::create(
         &pool,
@@ -139,19 +83,6 @@ async fn games_relational_chain() {
 #[tokio::test]
 async fn roms_crud_round_trip() {
     let (pool, _dir) = throwaway_pool().await;
-
-    systems::create(
-        &pool,
-        systems::NewSystem {
-            id: "genesis".into(),
-            name: "Sega Genesis".into(),
-            extensions: r#"["md","bin"]"#.into(),
-            retroarch_core: Some("genesis_plus_gx".into()),
-            standalone_binary: None,
-        },
-    )
-    .await
-    .unwrap();
 
     let rom = roms::create(
         &pool,

@@ -25,7 +25,7 @@ pub enum ScanTarget {
 /// there's no reliable way to guess which loose files belong together. A missing or unreadable
 /// system folder yields an empty list rather than an error -- ported from the Electron MVP's
 /// `scanner/walk.ts`.
-pub async fn walk_system_folder(system_folder: &Path, extensions: &[String]) -> Vec<ScanTarget> {
+pub async fn walk_system_folder(system_folder: &Path, extensions: &[&str]) -> Vec<ScanTarget> {
     let Ok(mut entries) = tokio::fs::read_dir(system_folder).await else {
         return Vec::new();
     };
@@ -101,16 +101,12 @@ mod tests {
     use super::*;
     use std::fs;
 
-    fn extensions(exts: &[&str]) -> Vec<String> {
-        exts.iter().map(|s| s.to_string()).collect()
-    }
-
     #[tokio::test]
     async fn missing_folder_returns_empty() {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("does-not-exist");
 
-        let targets = walk_system_folder(&missing, &extensions(&["nes"])).await;
+        let targets = walk_system_folder(&missing, &["nes"]).await;
         assert!(targets.is_empty());
     }
 
@@ -120,7 +116,7 @@ mod tests {
         fs::write(dir.path().join("Super Mario Bros. (USA).NES"), "").unwrap();
         fs::write(dir.path().join("readme.txt"), "").unwrap();
 
-        let targets = walk_system_folder(dir.path(), &extensions(&["nes"])).await;
+        let targets = walk_system_folder(dir.path(), &["nes"]).await;
 
         assert_eq!(targets.len(), 1);
         match &targets[0] {
@@ -139,7 +135,7 @@ mod tests {
         fs::create_dir(&game_dir).unwrap();
         fs::write(game_dir.join("Some Game (Disc 1).cue"), "").unwrap();
 
-        let targets = walk_system_folder(dir.path(), &extensions(&["cue"])).await;
+        let targets = walk_system_folder(dir.path(), &["cue"]).await;
         assert!(targets.is_empty());
     }
 
@@ -154,7 +150,7 @@ mod tests {
         )
         .unwrap();
 
-        let targets = walk_system_folder(dir.path(), &extensions(&["cue"])).await;
+        let targets = walk_system_folder(dir.path(), &["cue"]).await;
 
         assert_eq!(targets.len(), 1);
         match &targets[0] {

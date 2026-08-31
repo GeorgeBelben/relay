@@ -5,11 +5,12 @@ use std::sync::{Arc, Mutex};
 use sqlx::SqlitePool;
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use crate::db::{games, roms, settings, systems};
+use crate::db::{games, roms, settings};
 use crate::emulator::command::{build_launch_command, RetroarchOptions, SystemLaunchConfig};
 use crate::emulator::process::{self, LauncherStatus};
 use crate::emulator::retroarch_config::{self, GameLaunchDirs};
 use crate::ingestion::paths;
+use crate::systems;
 
 /// Shared launch state, managed as Tauri state so it lives for the app's lifetime -- one game (so
 /// one child process) can run at a time, matching the MVP's single-window/single-device model.
@@ -54,14 +55,10 @@ pub async fn launch_game<R: tauri::Runtime>(
         .await
         .map_err(crate::logging::err_to_string)?
         .ok_or_else(|| format!("Rom not found: {}", game.rom_id))?;
-    let system = systems::get(pool.inner(), &rom.system_id)
-        .await
-        .map_err(crate::logging::err_to_string)?
-        .ok_or_else(|| format!("System not found: {}", rom.system_id))?;
+    let system = systems::get(&rom.system_id).ok_or_else(|| format!("System not found: {}", rom.system_id))?;
 
     let rom_path = paths::roms_path().join(&rom.path).to_string_lossy().into_owned();
-    let system_config =
-        SystemLaunchConfig { retroarch_core: system.retroarch_core.as_deref(), standalone_binary: system.standalone_binary.as_deref() };
+    let system_config = SystemLaunchConfig { retroarch_core: system.retroarch_core, standalone_binary: system.standalone_binary };
 
     let retroarch_options = match &system.retroarch_core {
         Some(_) => Some(build_retroarch_options(&app, pool.inner(), &rom.system_id, &game_id, &paths::library_root()).await?),

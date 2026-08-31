@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT games.id, games.title,\n                  systems.id as system_id, systems.name as system_name,\n                  game_media.local_path as boxart_path,\n                  games.ra_highest_award_kind,\n                  games.created_at as \"created_at!: i64\"\n           FROM games\n           JOIN roms ON games.rom_id = roms.id\n           JOIN systems ON roms.system_id = systems.id\n           LEFT JOIN game_media ON game_media.game_id = games.id AND game_media.kind = 'boxart'\n           WHERE roms.status = 'ok'\n           ORDER BY games.created_at DESC\n           LIMIT ?",
+  "query": "SELECT games.id, games.title,\n                  roms.system_id as \"system_id!\",\n                  game_media.local_path as boxart_path,\n                  games.ra_highest_award_kind,\n                  games.created_at as \"created_at!: i64\"\n           FROM games\n           JOIN roms ON games.rom_id = roms.id\n           LEFT JOIN game_media ON game_media.game_id = games.id AND game_media.kind = 'boxart'\n           WHERE roms.status = 'ok'\n           ORDER BY games.created_at DESC\n           LIMIT ?",
   "describe": {
     "columns": [
       {
@@ -26,30 +26,19 @@
         }
       },
       {
-        "name": "system_id",
+        "name": "system_id!",
         "ordinal": 2,
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "systems",
-            "name": "id"
-          }
-        }
-      },
-      {
-        "name": "system_name",
-        "ordinal": 3,
-        "type_info": "Text",
-        "origin": {
-          "Table": {
-            "table": "systems",
-            "name": "name"
+            "table": "roms",
+            "name": "system_id"
           }
         }
       },
       {
         "name": "boxart_path",
-        "ordinal": 4,
+        "ordinal": 3,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -60,7 +49,7 @@
       },
       {
         "name": "ra_highest_award_kind",
-        "ordinal": 5,
+        "ordinal": 4,
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -71,7 +60,7 @@
       },
       {
         "name": "created_at!: i64",
-        "ordinal": 6,
+        "ordinal": 5,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -88,11 +77,10 @@
       false,
       false,
       false,
-      false,
       true,
       true,
       false
     ]
   },
-  "hash": "a4aba0d4480eb03ad6349c96a35e63b0cb66198d634cb8c17ea1bfb6e864ba34"
+  "hash": "9a69643ee1f36f387f9c897e2973e9d50ed402e2acbfb11d5b6ad6efdc6b1b62"
 }

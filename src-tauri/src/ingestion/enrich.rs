@@ -143,7 +143,6 @@ mod tests {
     use super::*;
     use crate::db::games as games_db;
     use crate::db::roms::{self, NewRom};
-    use crate::db::systems::{self, NewSystem};
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -157,18 +156,6 @@ mod tests {
     }
 
     async fn seed_unenriched_game(pool: &SqlitePool, title: &str) -> games::UnenrichedGame {
-        systems::create(
-            pool,
-            NewSystem {
-                id: "snes".into(),
-                name: "SNES".into(),
-                extensions: "[\"sfc\"]".into(),
-                retroarch_core: None,
-                standalone_binary: None,
-            },
-        )
-        .await
-        .unwrap();
         let rom = roms::create(
             pool,
             NewRom { system_id: "snes".into(), path: "snes/game.sfc".into(), crc32: None, size_bytes: None, discs: None },
