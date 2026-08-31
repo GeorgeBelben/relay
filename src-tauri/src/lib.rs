@@ -109,6 +109,11 @@ pub fn run() {
             commands::system::get_username,
             commands::system::list_wallpapers,
             commands::system::quit,
+            commands::datetime::get_datetime_status,
+            commands::datetime::list_timezones,
+            commands::datetime::set_timezone,
+            commands::datetime::set_ntp_enabled,
+            commands::datetime::set_time,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

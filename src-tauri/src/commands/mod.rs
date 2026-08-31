@@ -1,4 +1,5 @@
 pub mod bluetooth;
+pub mod datetime;
 pub mod emulator;
 pub mod game_actions;
 pub mod game_media;
