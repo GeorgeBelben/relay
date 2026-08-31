@@ -382,6 +382,12 @@ async fn profile_commands_round_trip_through_ipc() {
     let create_res = get_ipc_response(&webview, invoke_request("create_profile", json!({ "name": "George" })));
     let created: Value = create_res.expect("create_profile should succeed").deserialize().unwrap();
     assert_eq!(created["name"], "George");
+    // The redacted, IPC-safe view -- encrypted RA credential columns must never cross the IPC
+    // boundary (see db::profiles::ProfileSummary), only whether a link exists.
+    assert!(created.get("ra_web_api_key_encrypted").is_none());
+    assert!(created.get("ra_token_encrypted").is_none());
+    assert_eq!(created["has_web_api_link"], false);
+    assert_eq!(created["has_connect_link"], false);
     let profile_id = created["id"].as_str().unwrap().to_string();
 
     let rename_res =

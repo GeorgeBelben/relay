@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE profiles SET ra_username = ?, ra_token_encrypted = ?, updated_at = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "c874af91cddc184c4689b4166bb0b72eb224f9816c807d31ee198255452c32b3"
+}

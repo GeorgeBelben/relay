@@ -220,6 +220,18 @@ pub async fn mark_no_match(pool: &SqlitePool, id: &str) -> Result<Game, sqlx::Er
     .await
 }
 
+// Piggybacks on the existing per-game achievements fetch (game_actions::get_achievements) rather
+// than a dedicated sync pass -- every tile focus already triggers that fetch, so there's no need
+// for a separate background job just to keep this column current. Ported from the Electron MVP's
+// `gamesRepository.updateHighestAwardKind`.
+pub async fn update_highest_award_kind(pool: &SqlitePool, id: &str, ra_highest_award_kind: Option<&str>) -> Result<(), sqlx::Error> {
+    let now = now_unix();
+    sqlx::query!("UPDATE games SET ra_highest_award_kind = ?, updated_at = ? WHERE id = ?", ra_highest_award_kind, now, id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 // No FK cascade configured, so game_media rows are removed explicitly first rather than
 // left orphaned (mirrors profiles::delete's handling of ra_stats).
 pub async fn delete(pool: &SqlitePool, id: &str) -> Result<(), sqlx::Error> {

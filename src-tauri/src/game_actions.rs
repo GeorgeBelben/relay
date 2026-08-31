@@ -1,10 +1,6 @@
 //! On-demand, user-initiated actions on a single game -- distinct from `ingestion::enrich`'s
 //! automatic pass, which runs across the whole unenriched backlog during a scan. Ported from the
 //! Electron MVP's `gameActions.service.ts`.
-//!
-//! `getAchievements` (RetroAchievements progress) isn't ported yet -- it needs a linked profile's
-//! RA credentials, which don't exist in this codebase yet (see Linear REL-114/115/116/117);
-//! deliberately deferred to land alongside that work rather than half-building it here.
 
 use std::path::Path;
 
@@ -14,6 +10,7 @@ use sqlx::SqlitePool;
 use crate::db::{game_media, games, roms};
 use crate::ingestion::enrich::{download_boxart, EnrichError};
 use crate::ingestion::identify::steamgriddb::{SteamGridDbClient, SteamGridDbError};
+use crate::retroachievements::client::{badge_url, RaError, RetroAchievementsClient};
 
 // A manually-picked match is as confident as it gets -- distinct from enrich.rs's auto-match,
 // which scores against a threshold since nobody's confirmed it by eye.
@@ -31,10 +28,36 @@ pub struct AlternateMatch {
     pub boxart_url: Option<String>,
 }
 
+#[derive(Debug, PartialEq, Serialize)]
+pub struct AchievementView {
+    pub id: i64,
+    pub title: String,
+    pub description: String,
+    pub points: i64,
+    pub badge_url: String,
+    pub unlocked: bool,
+}
+
+/// Backs the drawer's "Achievements" view and the Home progress card. `badge_url` is already
+/// resolved to the locked/unlocked variant server-side so the frontend never needs to know RA's
+/// own badge-naming convention. Mirrors the Electron MVP's `RetroAchievementsProgress` shared type.
+#[derive(Debug, PartialEq, Serialize)]
+pub struct GameAchievementsProgress {
+    pub game_id: i64,
+    pub title: String,
+    pub console_name: String,
+    pub num_achievements: i64,
+    pub num_awarded_to_user: i64,
+    pub user_completion: String,
+    pub highest_award_kind: Option<String>,
+    pub achievements: Vec<AchievementView>,
+}
+
 #[derive(Debug)]
 pub enum GameActionsError {
     GameNotFound,
     SteamGridDb(SteamGridDbError),
+    RetroAchievements(RaError),
     Db(sqlx::Error),
     Download(reqwest::Error),
     Io(std::io::Error),
@@ -45,6 +68,7 @@ impl std::fmt::Display for GameActionsError {
         match self {
             Self::GameNotFound => write!(f, "game not found"),
             Self::SteamGridDb(e) => write!(f, "SteamGridDB error: {e}"),
+            Self::RetroAchievements(e) => write!(f, "RetroAchievements error: {e}"),
             Self::Db(e) => write!(f, "database error: {e}"),
             Self::Download(e) => write!(f, "box art download error: {e}"),
             Self::Io(e) => write!(f, "filesystem error: {e}"),
@@ -62,6 +86,11 @@ impl From<sqlx::Error> for GameActionsError {
 impl From<SteamGridDbError> for GameActionsError {
     fn from(e: SteamGridDbError) -> Self {
         Self::SteamGridDb(e)
+    }
+}
+impl From<RaError> for GameActionsError {
+    fn from(e: RaError) -> Self {
+        Self::RetroAchievements(e)
     }
 }
 impl From<EnrichError> for GameActionsError {
@@ -134,6 +163,52 @@ pub async fn apply_match(
     game_media::upsert_boxart(pool, game_id, &local_path, &boxart_url).await?;
 
     Ok(())
+}
+
+/// `None` means "this game isn't matched to a RetroAchievements entry" -- a normal, expected
+/// outcome (unsupported system, no RA entry for this ROM, or the auto-match pass just hasn't run
+/// yet -- see `retroachievements::client`'s own module doc for why nothing populates
+/// `retroachievements_game_id` yet), not an error. Missing/invalid credentials *do* propagate as an
+/// error, same as `search_alternate_matches`' missing-API-key case -- that's a real,
+/// user-actionable configuration gap, not a per-game state.
+pub async fn get_achievements(
+    client: &RetroAchievementsClient,
+    pool: &SqlitePool,
+    username: &str,
+    game_id: &str,
+) -> Result<Option<GameAchievementsProgress>, GameActionsError> {
+    let game = games::get(pool, game_id).await?.ok_or(GameActionsError::GameNotFound)?;
+    let Some(ra_game_id) = game.retroachievements_game_id else { return Ok(None) };
+
+    let Some(progress) = client.get_game_info_and_user_progress(username, ra_game_id).await? else {
+        return Ok(None);
+    };
+
+    // Persists the "beaten" flag onto the game row so it's visible on a tile without being
+    // focused (piggybacks on the fetch every tile focus already triggers). A failed write here
+    // shouldn't fail the achievements view itself -- the fetch just succeeded and has real data
+    // to show regardless of whether this cache update lands.
+    let _ = games::update_highest_award_kind(pool, game_id, progress.highest_award_kind.as_deref()).await;
+
+    let achievements = progress
+        .achievements
+        .into_iter()
+        .map(|a| {
+            let unlocked = a.unlocked_at.is_some();
+            AchievementView { id: a.id, title: a.title, description: a.description, points: a.points, badge_url: badge_url(&a.badge_name, unlocked), unlocked }
+        })
+        .collect();
+
+    Ok(Some(GameAchievementsProgress {
+        game_id: progress.game_id,
+        title: progress.title,
+        console_name: progress.console_name,
+        num_achievements: progress.num_achievements,
+        num_awarded_to_user: progress.num_awarded_to_user,
+        user_completion: progress.user_completion,
+        highest_award_kind: progress.highest_award_kind,
+        achievements,
+    }))
 }
 
 #[cfg(test)]
@@ -320,6 +395,74 @@ mod tests {
         let http = reqwest::Client::new();
 
         let err = apply_match(&client, &http, &pool, media_root.path(), "nope", 1, "Title").await.unwrap_err();
+        assert!(matches!(err, GameActionsError::GameNotFound));
+    }
+
+    #[tokio::test]
+    async fn get_achievements_returns_none_when_the_game_has_no_ra_match() {
+        let (pool, _dir) = throwaway_pool().await;
+        let game_id = seed_game(&pool, "Unmatched Game").await;
+        let client = RetroAchievementsClient::with_base_url("fake-key", "http://localhost:1");
+
+        let progress = get_achievements(&client, &pool, "retrouser", &game_id).await.unwrap();
+        assert_eq!(progress, None);
+    }
+
+    #[tokio::test]
+    async fn get_achievements_returns_progress_and_persists_the_highest_award_kind() {
+        let (pool, _dir) = throwaway_pool().await;
+        let game_id = seed_game(&pool, "Chrono Trigger").await;
+        sqlx::query!("UPDATE games SET retroachievements_game_id = 99 WHERE id = ?", game_id).execute(&pool).await.unwrap();
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/API_GetGameInfoAndUserProgress.php"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "ID": 99, "Title": "Chrono Trigger", "ConsoleName": "SNES",
+                "NumAchievements": 1, "NumAwardedToUser": 1, "UserCompletion": "100.00%",
+                "HighestAwardKind": "mastered",
+                "Achievements": { "1": { "ID": 1, "Title": "Time's Up", "Description": "Beat the game", "Points": 10, "BadgeName": "12345", "DisplayOrder": 1, "DateEarned": "2026-08-20 10:00:00" } },
+            })))
+            .mount(&server)
+            .await;
+
+        let client = RetroAchievementsClient::with_base_url("fake-key", &server.uri());
+        let progress = get_achievements(&client, &pool, "retrouser", &game_id).await.unwrap().unwrap();
+
+        assert_eq!(progress.game_id, 99);
+        assert_eq!(progress.highest_award_kind.as_deref(), Some("mastered"));
+        assert_eq!(progress.achievements.len(), 1);
+        assert!(progress.achievements[0].unlocked);
+        assert_eq!(progress.achievements[0].badge_url, "https://i.retroachievements.org/Badge/12345.png");
+
+        let stored = games::get(&pool, &game_id).await.unwrap().unwrap();
+        assert_eq!(stored.ra_highest_award_kind.as_deref(), Some("mastered"));
+    }
+
+    #[tokio::test]
+    async fn get_achievements_returns_none_when_ra_doesnt_recognize_the_game_or_user() {
+        let (pool, _dir) = throwaway_pool().await;
+        let game_id = seed_game(&pool, "Chrono Trigger").await;
+        sqlx::query!("UPDATE games SET retroachievements_game_id = 99 WHERE id = ?", game_id).execute(&pool).await.unwrap();
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/API_GetGameInfoAndUserProgress.php"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([])))
+            .mount(&server)
+            .await;
+
+        let client = RetroAchievementsClient::with_base_url("fake-key", &server.uri());
+        let progress = get_achievements(&client, &pool, "retrouser", &game_id).await.unwrap();
+        assert_eq!(progress, None);
+    }
+
+    #[tokio::test]
+    async fn get_achievements_returns_game_not_found_for_an_unknown_id() {
+        let (pool, _dir) = throwaway_pool().await;
+        let client = RetroAchievementsClient::with_base_url("fake-key", "http://localhost:1");
+
+        let err = get_achievements(&client, &pool, "retrouser", "nope").await.unwrap_err();
         assert!(matches!(err, GameActionsError::GameNotFound));
     }
 }

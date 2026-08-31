@@ -75,6 +75,19 @@ export function useSetRumbleEnabled() {
   });
 }
 
+export function useActiveProfileId(): string | null {
+  const { data } = useGeneralSettings();
+  return data?.active_profile_id ?? null;
+}
+
+export function useSetActiveProfileId() {
+  const invalidate = useInvalidateGeneralSettings();
+  return useMutation({
+    mutationFn: (profileId: string | null) => invoke<void>("set_active_profile_id", { profileId }),
+    onSuccess: invalidate,
+  });
+}
+
 // "" means no wallpaper picked -- matches the backend's own default (settings.rs's wallpaper
 // column), so there's one canonical "none" value instead of undefined/null/"" all meaning the
 // same thing.

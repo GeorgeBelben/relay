@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Mirrors src-tauri/src/game_actions.rs's AlternateMatch -- boxart_url here is the *remote*
 // SteamGridDB image, straight from their CDN, for preview only. Nothing's downloaded or
@@ -29,5 +29,39 @@ export function useApplyMatch() {
       queryClient.invalidateQueries({ queryKey: ["games"] });
       queryClient.invalidateQueries({ queryKey: ["library"] });
     },
+  });
+}
+
+// Mirrors src-tauri/src/game_actions.rs's AchievementView/GameAchievementsProgress. badge_url is
+// already resolved to the locked/unlocked variant server-side.
+export type Achievement = {
+  id: number;
+  title: string;
+  description: string;
+  points: number;
+  badge_url: string;
+  unlocked: boolean;
+};
+
+export type GameAchievementsProgress = {
+  game_id: number;
+  title: string;
+  console_name: string;
+  num_achievements: number;
+  num_awarded_to_user: number;
+  user_completion: string;
+  highest_award_kind: string | null;
+  achievements: Achievement[];
+};
+
+// null means "this game isn't matched to a RetroAchievements entry" (or no profile is
+// RA-linked) -- a normal, expected outcome, not an error. A query rather than a mutation, unlike
+// the two above: this backs a passive "show current progress" view (the drawer's Achievements
+// tab, tile focus), not a one-shot user action, even though the backend also opportunistically
+// persists the fetched highest_award_kind as a side effect.
+export function useAchievements(gameId: string) {
+  return useQuery({
+    queryKey: ["games", gameId, "achievements"],
+    queryFn: () => invoke<GameAchievementsProgress | null>("get_achievements", { gameId }),
   });
 }

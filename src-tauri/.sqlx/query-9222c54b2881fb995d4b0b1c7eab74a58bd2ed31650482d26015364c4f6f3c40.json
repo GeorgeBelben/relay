@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE games SET ra_highest_award_kind = ?, updated_at = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "9222c54b2881fb995d4b0b1c7eab74a58bd2ed31650482d26015364c4f6f3c40"
+}

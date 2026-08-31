@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT ra_username, ra_web_api_key_encrypted, ra_token_encrypted FROM profiles WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "ra_username",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "ra_username"
+          }
+        }
+      },
+      {
+        "name": "ra_web_api_key_encrypted",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "ra_web_api_key_encrypted"
+          }
+        }
+      },
+      {
+        "name": "ra_token_encrypted",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "profiles",
+            "name": "ra_token_encrypted"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "bd53eed8ddb7be616cc610adace647787766cbdc15ba04c2e4f92012b0e5dba3"
+}

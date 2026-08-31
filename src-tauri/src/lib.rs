@@ -3,6 +3,8 @@ pub mod db;
 pub mod emulator;
 pub mod game_actions;
 pub mod ingestion;
+pub mod retroachievements;
+pub mod secrets;
 pub mod system;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -101,6 +103,11 @@ pub fn run() {
             commands::profiles::create_profile,
             commands::profiles::rename_profile,
             commands::profiles::delete_profile,
+            commands::profiles::link_ra_web_api,
+            commands::profiles::link_ra_connect_account,
+            commands::profiles::unlink_ra,
+            commands::profiles::get_ra_stats,
+            commands::profiles::refresh_ra_stats,
             commands::game_media::list_game_media,
             commands::game_media::get_media_root_path,
             commands::library::list_library_shelves,
@@ -108,6 +115,7 @@ pub fn run() {
             commands::library::list_recently_added_games,
             commands::game_actions::search_alternate_matches,
             commands::game_actions::apply_match,
+            commands::game_actions::get_achievements,
             commands::system::get_username,
             commands::system::list_wallpapers,
             commands::system::quit,
