@@ -36,7 +36,7 @@ pub fn get_launcher_status(state: State<'_, LauncherState>) -> LauncherStatus {
 
 #[tauri::command]
 pub fn kill_game(state: State<'_, LauncherState>) -> Result<(), String> {
-    process::kill(&state.active_pid).map_err(|e| e.to_string())
+    process::kill(&state.active_pid).map_err(crate::logging::err_to_string)
 }
 
 #[tauri::command]
@@ -48,15 +48,15 @@ pub async fn launch_game<R: tauri::Runtime>(
 ) -> Result<(), String> {
     let game = games::get(pool.inner(), &game_id)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(crate::logging::err_to_string)?
         .ok_or_else(|| format!("Game not found: {game_id}"))?;
     let rom = roms::get(pool.inner(), &game.rom_id)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(crate::logging::err_to_string)?
         .ok_or_else(|| format!("Rom not found: {}", game.rom_id))?;
     let system = systems::get(pool.inner(), &rom.system_id)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(crate::logging::err_to_string)?
         .ok_or_else(|| format!("System not found: {}", rom.system_id))?;
 
     let rom_path = paths::roms_path().join(&rom.path).to_string_lossy().into_owned();
@@ -68,7 +68,7 @@ pub async fn launch_game<R: tauri::Runtime>(
         None => None,
     };
 
-    let launch_command = build_launch_command(&system_config, &rom_path, retroarch_options.as_ref()).map_err(|e| e.to_string())?;
+    let launch_command = build_launch_command(&system_config, &rom_path, retroarch_options.as_ref()).map_err(crate::logging::err_to_string)?;
 
     process::launch(
         &launch_command.command,
@@ -86,7 +86,7 @@ pub async fn launch_game<R: tauri::Runtime>(
         },
     )
     .await
-    .map_err(|e| e.to_string())?;
+    .map_err(crate::logging::err_to_string)?;
 
     Ok(())
 }
@@ -107,17 +107,17 @@ async fn build_retroarch_options<R: tauri::Runtime>(
     game_id: &str,
     library_root: &Path,
 ) -> Result<RetroarchOptions, String> {
-    let cores_path = settings::get_general_settings(pool).await.map_err(|e| e.to_string())?.retroarch_cores_path;
+    let cores_path = settings::get_general_settings(pool).await.map_err(crate::logging::err_to_string)?.retroarch_cores_path;
 
-    let config_dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("launch-configs");
-    tokio::fs::create_dir_all(&config_dir).await.map_err(|e| e.to_string())?;
+    let config_dir = app.path().app_data_dir().map_err(crate::logging::err_to_string)?.join("launch-configs");
+    tokio::fs::create_dir_all(&config_dir).await.map_err(crate::logging::err_to_string)?;
     let append_config_path = config_dir.join(format!("{game_id}.cfg"));
 
     let saves_dir = library_root.join("saves").join(system_id).join(game_id);
     let save_states_dir = library_root.join("savestates").join(system_id).join(game_id);
     let screenshots_dir = library_root.join("screenshots").join(system_id).join(game_id);
     let dirs = GameLaunchDirs { saves_dir: &saves_dir, save_states_dir: &save_states_dir, screenshots_dir: &screenshots_dir };
-    retroarch_config::write_launch_config(&append_config_path, &dirs).await.map_err(|e| e.to_string())?;
+    retroarch_config::write_launch_config(&append_config_path, &dirs).await.map_err(crate::logging::err_to_string)?;
 
     Ok(RetroarchOptions { cores_path: PathBuf::from(cores_path), append_config_path })
 }

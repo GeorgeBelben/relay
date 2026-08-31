@@ -3,6 +3,7 @@ pub mod db;
 pub mod emulator;
 pub mod game_actions;
 pub mod ingestion;
+pub mod logging;
 pub mod retroachievements;
 pub mod secrets;
 pub mod system;
@@ -18,6 +19,10 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    logging::init();
+    logging::install_panic_hook();
+    tracing::info!("Relay starting up");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
@@ -43,6 +48,10 @@ pub fn run() {
                     .run(&pool)
                     .await
                     .expect("failed to run migrations");
+
+                system::storage::ensure_library_dirs(&ingestion::paths::library_root())
+                    .await
+                    .expect("failed to create library directories");
 
                 app_handle.manage(pool);
             });

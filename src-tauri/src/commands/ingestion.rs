@@ -44,7 +44,7 @@ pub async fn rescan_library(
     status: State<'_, ScanStatusState>,
 ) -> Result<(), String> {
     // Mirrors the Electron MVP's <userData>/dats/ cache location.
-    let dats_cache_dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("dats");
+    let dats_cache_dir = app.path().app_data_dir().map_err(crate::logging::err_to_string)?.join("dats");
 
     rescan_library_at(
         &app,
@@ -72,7 +72,7 @@ async fn rescan_library_at<R: tauri::Runtime>(
     media_root: &Path,
     dats_cache_dir: &Path,
 ) -> Result<(), String> {
-    let api_key = settings::get(pool, "steamgriddbApiKey").await.map_err(|e| e.to_string())?;
+    let api_key = settings::get(pool, "steamgriddbApiKey").await.map_err(crate::logging::err_to_string)?;
     let client = api_key.map(SteamGridDbClient::new);
     let no_intro = NoIntroDatLookup::new(dats_cache_dir.to_path_buf());
 
@@ -83,7 +83,7 @@ async fn rescan_library_at<R: tauri::Runtime>(
         let _ = app.emit("scanner:status", &next);
     })
     .await
-    .map_err(|e| e.to_string())
+    .map_err(crate::logging::err_to_string)
 }
 
 #[cfg(test)]

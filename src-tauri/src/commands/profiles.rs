@@ -13,34 +13,34 @@ use crate::retroachievements::connect_client;
 // DB itself -- see secrets.rs's own module doc for why a DB copy/backup shouldn't be enough to
 // recover a linked account's credentials on its own.
 fn secrets_key_path(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(app.path().app_data_dir().map_err(|e| e.to_string())?.join("secret.key"))
+    Ok(app.path().app_data_dir().map_err(crate::logging::err_to_string)?.join("secret.key"))
 }
 
 #[tauri::command]
 pub async fn list_profiles(pool: State<'_, SqlitePool>) -> Result<Vec<ProfileSummary>, String> {
-    let rows = profiles::list(pool.inner()).await.map_err(|e| e.to_string())?;
+    let rows = profiles::list(pool.inner()).await.map_err(crate::logging::err_to_string)?;
     Ok(rows.into_iter().map(ProfileSummary::from).collect())
 }
 
 #[tauri::command]
 pub async fn get_profile(pool: State<'_, SqlitePool>, id: String) -> Result<Option<ProfileSummary>, String> {
-    let row = profiles::get(pool.inner(), &id).await.map_err(|e| e.to_string())?;
+    let row = profiles::get(pool.inner(), &id).await.map_err(crate::logging::err_to_string)?;
     Ok(row.map(ProfileSummary::from))
 }
 
 #[tauri::command]
 pub async fn create_profile(pool: State<'_, SqlitePool>, name: String) -> Result<ProfileSummary, String> {
-    profiles::create(pool.inner(), &name).await.map(ProfileSummary::from).map_err(|e| e.to_string())
+    profiles::create(pool.inner(), &name).await.map(ProfileSummary::from).map_err(crate::logging::err_to_string)
 }
 
 #[tauri::command]
 pub async fn rename_profile(pool: State<'_, SqlitePool>, id: String, name: String) -> Result<ProfileSummary, String> {
-    profiles::rename(pool.inner(), &id, &name).await.map(ProfileSummary::from).map_err(|e| e.to_string())
+    profiles::rename(pool.inner(), &id, &name).await.map(ProfileSummary::from).map_err(crate::logging::err_to_string)
 }
 
 #[tauri::command]
 pub async fn delete_profile(pool: State<'_, SqlitePool>, id: String) -> Result<(), String> {
-    profiles::delete(pool.inner(), &id).await.map_err(|e| e.to_string())
+    profiles::delete(pool.inner(), &id).await.map_err(crate::logging::err_to_string)
 }
 
 fn new_ra_stats(stats: RaUserStats) -> NewRaStats {
@@ -55,21 +55,21 @@ fn new_ra_stats(stats: RaUserStats) -> NewRaStats {
 #[tauri::command]
 pub async fn link_ra_web_api(app: AppHandle, pool: State<'_, SqlitePool>, profile_id: String, username: String, web_api_key: String) -> Result<(), String> {
     let client = RetroAchievementsClient::new(web_api_key.clone());
-    let stats = client.get_user_stats(&username).await.map_err(|e| e.to_string())?;
+    let stats = client.get_user_stats(&username).await.map_err(crate::logging::err_to_string)?;
 
     let key_path = secrets_key_path(&app)?;
-    profiles::set_web_api_link(pool.inner(), &key_path, &profile_id, &username, &web_api_key).await.map_err(|e| e.to_string())?;
-    ra_stats::upsert(pool.inner(), &profile_id, new_ra_stats(stats)).await.map_err(|e| e.to_string())?;
+    profiles::set_web_api_link(pool.inner(), &key_path, &profile_id, &username, &web_api_key).await.map_err(crate::logging::err_to_string)?;
+    ra_stats::upsert(pool.inner(), &profile_id, new_ra_stats(stats)).await.map_err(crate::logging::err_to_string)?;
     Ok(())
 }
 
 #[tauri::command]
 pub async fn link_ra_connect_account(app: AppHandle, pool: State<'_, SqlitePool>, profile_id: String, username: String, password: String) -> Result<(), String> {
     let http = reqwest::Client::new();
-    let token = connect_client::login_real(&http, &username, &password).await.map_err(|e| e.to_string())?;
+    let token = connect_client::login_real(&http, &username, &password).await.map_err(crate::logging::err_to_string)?;
 
     let key_path = secrets_key_path(&app)?;
-    profiles::set_connect_token(pool.inner(), &key_path, &profile_id, &username, &token).await.map_err(|e| e.to_string())?;
+    profiles::set_connect_token(pool.inner(), &key_path, &profile_id, &username, &token).await.map_err(crate::logging::err_to_string)?;
     Ok(())
 }
 
@@ -80,8 +80,8 @@ pub async fn link_ra_connect_account(app: AppHandle, pool: State<'_, SqlitePool>
 /// account that's no longer linked reads as a bug, not a "keep history" feature).
 #[tauri::command]
 pub async fn unlink_ra(pool: State<'_, SqlitePool>, profile_id: String) -> Result<(), String> {
-    profiles::clear_ra_link(pool.inner(), &profile_id).await.map_err(|e| e.to_string())?;
-    ra_stats::delete(pool.inner(), &profile_id).await.map_err(|e| e.to_string())?;
+    profiles::clear_ra_link(pool.inner(), &profile_id).await.map_err(crate::logging::err_to_string)?;
+    ra_stats::delete(pool.inner(), &profile_id).await.map_err(crate::logging::err_to_string)?;
     Ok(())
 }
 
@@ -95,10 +95,10 @@ pub struct RaStatsView {
 
 #[tauri::command]
 pub async fn get_ra_stats(pool: State<'_, SqlitePool>, profile_id: String) -> Result<Option<RaStatsView>, String> {
-    let Some(row) = ra_stats::get(pool.inner(), &profile_id).await.map_err(|e| e.to_string())? else {
+    let Some(row) = ra_stats::get(pool.inner(), &profile_id).await.map_err(crate::logging::err_to_string)? else {
         return Ok(None);
     };
-    let recent_unlocks: Vec<RaRecentUnlock> = serde_json::from_str(&row.recent_unlocks_json).map_err(|e| e.to_string())?;
+    let recent_unlocks: Vec<RaRecentUnlock> = serde_json::from_str(&row.recent_unlocks_json).map_err(crate::logging::err_to_string)?;
     Ok(Some(RaStatsView { points: row.points, rank: row.rank, recent_unlocks, refreshed_at: row.refreshed_at }))
 }
 
@@ -108,7 +108,7 @@ pub async fn get_ra_stats(pool: State<'_, SqlitePool>, profile_id: String) -> Re
 #[tauri::command]
 pub async fn refresh_ra_stats(pool: State<'_, SqlitePool>, app: AppHandle, profile_id: String) -> Result<(), String> {
     let key_path = secrets_key_path(&app)?;
-    let Some(creds) = profiles::get_ra_credentials(pool.inner(), &key_path, &profile_id).await.map_err(|e| e.to_string())? else {
+    let Some(creds) = profiles::get_ra_credentials(pool.inner(), &key_path, &profile_id).await.map_err(crate::logging::err_to_string)? else {
         return Ok(());
     };
     let Some(web_api_key) = creds.ra_web_api_key else {
@@ -116,7 +116,7 @@ pub async fn refresh_ra_stats(pool: State<'_, SqlitePool>, app: AppHandle, profi
     };
 
     let client = RetroAchievementsClient::new(web_api_key);
-    let stats = client.get_user_stats(&creds.ra_username).await.map_err(|e| e.to_string())?;
-    ra_stats::upsert(pool.inner(), &profile_id, new_ra_stats(stats)).await.map_err(|e| e.to_string())?;
+    let stats = client.get_user_stats(&creds.ra_username).await.map_err(crate::logging::err_to_string)?;
+    ra_stats::upsert(pool.inner(), &profile_id, new_ra_stats(stats)).await.map_err(crate::logging::err_to_string)?;
     Ok(())
 }

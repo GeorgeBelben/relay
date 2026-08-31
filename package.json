@@ -17,6 +17,7 @@
     "@base-ui/react": "^1.7.0",
     "@dicebear/core": "^10.7.0",
     "@dicebear/styles": "^10.6.0",
+    "@logtail/browser": "^0.5.8",
     "@noriginmedia/norigin-spatial-navigation-core": "^4.1.0",
     "@noriginmedia/norigin-spatial-navigation-react": "^3.3.0",
     "@remixicon/react": "^4.9.0",

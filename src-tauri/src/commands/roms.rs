@@ -5,12 +5,12 @@ use crate::db::roms::{self, NewRom, Rom};
 
 #[tauri::command]
 pub async fn list_roms(pool: State<'_, SqlitePool>) -> Result<Vec<Rom>, String> {
-    roms::list(pool.inner()).await.map_err(|e| e.to_string())
+    roms::list(pool.inner()).await.map_err(crate::logging::err_to_string)
 }
 
 #[tauri::command]
 pub async fn get_rom(pool: State<'_, SqlitePool>, id: String) -> Result<Option<Rom>, String> {
-    roms::get(pool.inner(), &id).await.map_err(|e| e.to_string())
+    roms::get(pool.inner(), &id).await.map_err(crate::logging::err_to_string)
 }
 
 #[tauri::command]
@@ -24,7 +24,7 @@ pub async fn create_rom(
 ) -> Result<Rom, String> {
     roms::create(pool.inner(), NewRom { system_id, path, crc32, size_bytes, discs })
         .await
-        .map_err(|e| e.to_string())
+        .map_err(crate::logging::err_to_string)
 }
 
 #[tauri::command]
@@ -39,10 +39,10 @@ pub async fn update_rom(
 ) -> Result<Rom, String> {
     roms::update(pool.inner(), &id, NewRom { system_id, path, crc32, size_bytes, discs })
         .await
-        .map_err(|e| e.to_string())
+        .map_err(crate::logging::err_to_string)
 }
 
 #[tauri::command]
 pub async fn delete_rom(pool: State<'_, SqlitePool>, id: String) -> Result<(), String> {
-    roms::delete(pool.inner(), &id).await.map_err(|e| e.to_string())
+    roms::delete(pool.inner(), &id).await.map_err(crate::logging::err_to_string)
 }
