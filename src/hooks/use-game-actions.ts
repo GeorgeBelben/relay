@@ -59,9 +59,14 @@ export type GameAchievementsProgress = {
 // the two above: this backs a passive "show current progress" view (the drawer's Achievements
 // tab, tile focus), not a one-shot user action, even though the backend also opportunistically
 // persists the fetched highest_award_kind as a side effect.
-export function useAchievements(gameId: string) {
+// `enabled` defaults to true (the drawer's own Achievements view always wants this fetched), but
+// a grid that renders many tiles at once (see game-tile.tsx's All Games usage) needs to gate this
+// on focus -- without it, mounting hundreds of tiles fires hundreds of simultaneous achievement
+// lookups instead of the one for whichever tile is actually highlighted.
+export function useAchievements(gameId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["games", gameId, "achievements"],
     queryFn: () => invoke<GameAchievementsProgress | null>("get_achievements", { gameId }),
+    enabled: options?.enabled ?? true,
   });
 }
