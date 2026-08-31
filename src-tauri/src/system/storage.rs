@@ -33,9 +33,10 @@ pub fn get_directory_size(dir: PathBuf) -> Pin<Box<dyn Future<Output = u64> + Se
     })
 }
 
-// `library_root` may not exist yet on a fresh install (nothing creates ~/Relay itself up front --
-// its subdirectories are created lazily by scan/enrich), which would make statvfs fail with
-// ENOENT. Walk up to the nearest existing ancestor -- still the same filesystem/mount in practice.
+// `library_root` is created up front by `ensure_library_dirs` on real app startup (REL-129), but
+// this function is also called against arbitrary paths in tests (and could run before setup has
+// finished), which would make statvfs fail with ENOENT if the root is missing. Walk up to the
+// nearest existing ancestor -- still the same filesystem/mount in practice.
 fn nearest_existing_ancestor(path: &Path) -> PathBuf {
     let mut current = path;
     loop {
@@ -71,6 +72,16 @@ pub struct StorageUsage {
     pub media_bytes: u64,
     pub saves_bytes: u64,
     pub system_bytes: u64,
+}
+
+/// Creates the full `~/Relay` directory tree up front (REL-129), matching the Electron MVP's
+/// behavior at launch. `create_dir_all` no-ops on subdirectories that already exist, so this is
+/// safe to call on every startup, not just the first.
+pub async fn ensure_library_dirs(library_root: &Path) -> io::Result<()> {
+    for subdir in ["roms", "bios", "media", "wallpapers", "saves", "savestates", "screenshots"] {
+        tokio::fs::create_dir_all(library_root.join(subdir)).await?;
+    }
+    Ok(())
 }
 
 pub async fn get_storage_usage(library_root: &Path) -> io::Result<StorageUsage> {
@@ -129,6 +140,30 @@ mod tests {
 
         let (total, _free) = get_disk_space(&missing_child).unwrap();
         assert!(total > 0);
+    }
+
+    #[tokio::test]
+    async fn ensure_library_dirs_creates_the_full_tree_including_the_root_itself() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("Relay");
+
+        ensure_library_dirs(&root).await.unwrap();
+
+        for subdir in ["roms", "bios", "media", "wallpapers", "saves", "savestates", "screenshots"] {
+            assert!(root.join(subdir).is_dir(), "expected {subdir} to exist");
+        }
+    }
+
+    #[tokio::test]
+    async fn ensure_library_dirs_is_idempotent_on_a_tree_that_already_exists() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("Relay");
+        tokio::fs::create_dir_all(root.join("roms")).await.unwrap();
+        tokio::fs::write(root.join("roms").join("game.sfc"), vec![0u8; 5]).await.unwrap();
+
+        ensure_library_dirs(&root).await.unwrap();
+
+        assert_eq!(tokio::fs::read(root.join("roms").join("game.sfc")).await.unwrap(), vec![0u8; 5]);
     }
 
     #[tokio::test]
