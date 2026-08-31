@@ -5,6 +5,10 @@ import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/rea
 import { getContext, queryClient } from "./router";
 import { routeTree } from "./routeTree.gen";
 import "./main.css";
+import { initFocusEngine } from "@/lib/focus";
+
+// Must happen before any `useFocusable` component mounts.
+initFocusEngine();
 
 // Tauri's webview doesn't load from a plain http:// origin, so browser history semantics don't
 // apply the same way they would on the web -- memory history keeps the router's notion of
