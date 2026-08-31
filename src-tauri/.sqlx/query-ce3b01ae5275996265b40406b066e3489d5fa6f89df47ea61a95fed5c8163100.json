@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT games.id, games.title,\n                  systems.id as system_id, systems.name as system_name,\n                  game_media.local_path as boxart_path,\n                  games.ra_highest_award_kind,\n                  games.created_at as \"created_at!: i64\"\n           FROM games\n           JOIN roms ON games.rom_id = roms.id\n           JOIN systems ON roms.system_id = systems.id\n           LEFT JOIN game_media ON game_media.game_id = games.id AND game_media.kind = 'boxart'\n           WHERE roms.status = 'ok'\n           ORDER BY games.title",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "system_id",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "system_name",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "systems",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "boxart_path",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "game_media",
+            "name": "local_path"
+          }
+        }
+      },
+      {
+        "name": "ra_highest_award_kind",
+        "ordinal": 5,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "ra_highest_award_kind"
+          }
+        }
+      },
+      {
+        "name": "created_at!: i64",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "games",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "ce3b01ae5275996265b40406b066e3489d5fa6f89df47ea61a95fed5c8163100"
+}

@@ -1,5 +1,6 @@
 pub mod game_media;
 pub mod games;
+pub mod library;
 pub mod profiles;
 pub mod ra_stats;
 pub mod roms;

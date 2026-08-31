@@ -3,6 +3,7 @@ pub mod emulator;
 pub mod game_media;
 pub mod games;
 pub mod ingestion;
+pub mod library;
 pub mod network;
 pub mod profiles;
 pub mod roms;

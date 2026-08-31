@@ -100,6 +100,9 @@ pub fn run() {
             commands::profiles::delete_profile,
             commands::game_media::list_game_media,
             commands::game_media::get_media_root_path,
+            commands::library::list_library_shelves,
+            commands::library::list_all_games_in_library,
+            commands::library::list_recently_added_games,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
