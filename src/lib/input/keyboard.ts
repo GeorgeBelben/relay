@@ -8,6 +8,7 @@ const KEY_MAP: Record<string, NavEvent> = {
   Enter: { type: "action", action: "confirm" },
   Escape: { type: "action", action: "back" },
   m: { type: "action", action: "menu" },
+  Home: { type: "action", action: "home" },
 };
 
 export function mapKeyToNavEvent(key: string): NavEvent | null {
@@ -17,8 +18,9 @@ export function mapKeyToNavEvent(key: string): NavEvent | null {
 // Arrows and Enter are handled natively by norigin-spatial-navigation's own keydown listener
 // (see lib/focus/init.ts) -- it owns focus movement and enter-press directly, and calling
 // preventDefault/emitting our own event for those keys too would double-handle every press.
-// "Back" and "menu" have no equivalent in that library, so Escape/M are ours alone to own.
-const OWNED_BY_THIS_LISTENER = new Set(["Escape", "m"]);
+// "Back", "menu", and "home" have no equivalent in that library, so Escape/M/Home are ours
+// alone to own.
+const OWNED_BY_THIS_LISTENER = new Set(["Escape", "m", "Home"]);
 
 // onAnyRecognizedKey: fires for *every* recognized key, including arrows/Enter, which
 // this listener otherwise leaves entirely to the focus engine's own native keydown handling (see

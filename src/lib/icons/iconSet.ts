@@ -41,7 +41,9 @@ import keyboardConfirm from "@/assets/input-icons/keyboard/confirm.svg";
 import keyboardBack from "@/assets/input-icons/keyboard/back.svg";
 import keyboardMenu from "@/assets/input-icons/keyboard/menu.svg";
 
-export type HintKey = NavDirection | NavAction;
+// Excludes "home" -- see lib/hints/types.ts's Hint for why; there's no icon set for it since
+// nothing ever renders it as a hint.
+export type HintKey = NavDirection | Exclude<NavAction, "home">;
 
 type IconSet = Record<HintKey, string>;
 

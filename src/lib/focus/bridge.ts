@@ -36,6 +36,12 @@ function handleNavEvent(event: NavEvent) {
     return;
   }
 
+  // "home" isn't a focus-navigation concern at all -- it's owned entirely by its own global
+  // listener (REL-138's useSystemMenuListener), parallel to how "menu" is owned by
+  // useQuickMenuListener while playing. Without this guard it would fall through to handleBack()
+  // below, since that's every action's default here.
+  if (event.action === "home") return;
+
   handleBack();
 }
 

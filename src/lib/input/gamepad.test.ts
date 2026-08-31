@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startGamepadListener, stickToDirection } from "./gamepad";
 
-function fakeGamepad({ pressed = [], axes = [0, 0] }: { pressed?: number[]; axes?: number[] } = {}): Gamepad {
-  const buttons = Array.from({ length: 16 }, (_, i) => ({ pressed: pressed.includes(i) }) as GamepadButton);
+function fakeGamepad({
+  pressed = [],
+  axes = [0, 0],
+}: { pressed?: number[]; axes?: number[] } = {}): Gamepad {
+  const buttons = Array.from(
+    { length: 17 },
+    (_, i) => ({ pressed: pressed.includes(i) }) as GamepadButton,
+  );
   return { buttons, axes } as unknown as Gamepad;
 }
 
@@ -82,6 +88,16 @@ describe("startGamepadListener", () => {
 
     expect(onEvent).toHaveBeenCalledTimes(1);
     expect(onEvent).toHaveBeenCalledWith({ type: "action", action: "confirm" });
+  });
+
+  it("fires a home action for the Guide/PS/Xbox button", () => {
+    const onEvent = vi.fn();
+    startGamepadListener(onEvent, vi.fn());
+
+    pads = [fakeGamepad({ pressed: [16] })]; // home
+    tick(0);
+
+    expect(onEvent).toHaveBeenCalledWith({ type: "action", action: "home" });
   });
 
   it("allows a released and re-pressed action to fire again", () => {

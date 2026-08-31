@@ -7,6 +7,7 @@ export const BUTTON_ACTION_MAP: Record<number, NavAction> = {
   0: "confirm", // A / Cross
   1: "back", // B / Circle
   3: "menu", // Y / Triangle / X (north face button)
+  16: "home", // Guide / PS / Xbox button -- REL-138's system menu, distinct from "menu" above
 };
 
 export const BUTTON_DIRECTION_MAP: Record<number, NavDirection> = {
@@ -32,7 +33,10 @@ function readDirection(pad: Gamepad): NavDirection | null {
   return stickToDirection(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
 }
 
-export function startGamepadListener(onEvent: (event: NavEvent) => void, onUsed: () => void): () => void {
+export function startGamepadListener(
+  onEvent: (event: NavEvent) => void,
+  onUsed: () => void,
+): () => void {
   const heldActions = new Set<NavAction>();
   let activeDirection: { direction: NavDirection; since: number; lastRepeat: number } | null = null;
   let frame: number;
@@ -63,7 +67,10 @@ export function startGamepadListener(onEvent: (event: NavEvent) => void, onUsed:
       if (!activeDirection || activeDirection.direction !== direction) {
         activeDirection = { direction, since: now, lastRepeat: now };
         onEvent({ type: "direction", direction });
-      } else if (now - activeDirection.since > REPEAT_INITIAL_DELAY_MS && now - activeDirection.lastRepeat > REPEAT_INTERVAL_MS) {
+      } else if (
+        now - activeDirection.since > REPEAT_INITIAL_DELAY_MS &&
+        now - activeDirection.lastRepeat > REPEAT_INTERVAL_MS
+      ) {
         activeDirection.lastRepeat = now;
         onEvent({ type: "direction", direction });
       }

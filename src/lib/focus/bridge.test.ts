@@ -67,6 +67,15 @@ describe("useFocusBridge", () => {
     useLaunchStore.setState({ phase: "idle" });
   });
 
+  it("does not forward home actions to handleBack (REL-138's system menu owns it instead)", () => {
+    vi.mocked(handleBack).mockClear();
+    renderHook(() => useFocusBridge());
+
+    navEvents.emit({ type: "action", action: "home" });
+
+    expect(handleBack).not.toHaveBeenCalled();
+  });
+
   it("stops forwarding once unmounted", () => {
     const { unmount } = renderHook(() => useFocusBridge());
     unmount();
