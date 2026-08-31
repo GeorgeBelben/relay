@@ -12,8 +12,8 @@ export function SystemTile({ shelf }: { shelf: LibraryShelf }) {
       to={`/systems/${shelf.system_id}`}
       className={(focused) =>
         cn(
-          "flex aspect-square flex-col justify-center rounded-lg p-16 bg-zinc-900 transition-bounce",
-          focused && cn("scale-103 bg-zinc-800", FOCUS_RING),
+          "flex aspect-square flex-col justify-center rounded-lg p-16 bg-gray-900 transition-bounce",
+          focused && cn("scale-103 bg-gray-800", FOCUS_RING),
         )
       }
     >

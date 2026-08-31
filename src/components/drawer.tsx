@@ -93,7 +93,7 @@ export function Drawer({ open, onClose, focusKey = "DRAWER", className, children
             initialFocus={false}
             finalFocus={false}
             className={cn(
-              "h-full w-full max-w-sm space-y-1 overflow-y-auto bg-zinc-900 p-4 text-card-foreground shadow-2xl",
+              "h-full w-full max-w-sm space-y-1 overflow-y-auto bg-gray-900 p-4 text-card-foreground shadow-2xl",
               "transition-[transform,max-width] duration-200 ease-bounce",
               "data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full",
               className,

@@ -12,7 +12,7 @@ export function HeroDetails({ game }: { game: LibraryGame | null }) {
   return (
     <div className="animate-hero-details-in flex flex-col items-start gap-1 px-16 text-center">
       <h1 className="max-w-2xl text-3xl font-bold text-white">{game.title}</h1>
-      <span className="text-sm text-zinc-400 font-space-mono">{game.system_name}</span>
+      <span className="text-sm text-gray-400 font-space-mono">{game.system_name}</span>
     </div>
   );
 }

@@ -83,7 +83,7 @@ function Home() {
           </div>
         </Section>
 
-        <Section focusKey="SECTION_CONSOLES" className="py-16 border-t-1 border-zinc-800">
+        <Section focusKey="SECTION_CONSOLES" className="py-16 border-t-1 border-gray-800">
           {hasSystems ? (
             <Grid focusKey="GRID_SYSTEMS">
               {shelves.map((shelf) => (

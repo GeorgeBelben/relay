@@ -217,7 +217,7 @@ function AlternateTile({
     <div
       ref={ref}
       className={cn(
-        "relative flex aspect-2/3 flex-col justify-end overflow-hidden rounded-lg bg-zinc-800 p-2 transition-bounce",
+        "relative flex aspect-2/3 flex-col justify-end overflow-hidden rounded-lg bg-gray-800 p-2 transition-bounce",
         focused && "scale-105 ring-4 ring-inset ring-amber-500",
         disabled && !applying && "opacity-40",
       )}

@@ -65,10 +65,10 @@ export function CarouselGameTile({ game, onFocusTile, onTileFocus, scrollContain
         className={cn(
           "relative flex aspect-2/3 shrink-0 flex-col justify-end overflow-hidden rounded-lg p-3 transition-bounce",
           focused ? cn(CAROUSEL_TILE_WIDTH_FOCUSED) : CAROUSEL_TILE_WIDTH,
-          boxartUrl ? "" : "bg-zinc-800 flex items-center justify-center ",
+          boxartUrl ? "" : "bg-gray-800 flex items-center justify-center ",
         )}
       >
-        {!boxartUrl && <RiGamepadFill className={cn("text-zinc-500 transition-bounce", focused ? "size-24" : "size-16")} />}
+        {!boxartUrl && <RiGamepadFill className={cn("text-gray-500 transition-bounce", focused ? "size-24" : "size-16")} />}
         {boxartUrl && <img src={boxartUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
         {game.beaten && (
           <div className="bg-white size-6.5 p-px rounded-full absolute top-2 right-2 shadow-sm">

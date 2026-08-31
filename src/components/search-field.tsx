@@ -31,7 +31,7 @@ export function SearchField({ value, onChange, placeholder }: SearchFieldProps) 
       ref={ref}
       className={cn(
         "flex w-80 items-center gap-2 rounded-full border px-4 py-2 text-sm transition-bounce",
-        focused || active ? "border-white bg-zinc-800" : "border-transparent bg-zinc-900",
+        focused || active ? "border-white bg-gray-800" : "border-transparent bg-gray-900",
       )}
     >
       <RiSearchLine className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

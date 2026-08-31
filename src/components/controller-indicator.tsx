@@ -15,7 +15,10 @@ export function ControllerIndicator() {
       {Array.from({ length: SLOT_COUNT }, (_, slot) => {
         const filled = slot < connected.length;
         const Icon = filled ? RiGamepadFill : RiGamepadLine;
-        return <Icon key={slot} className={cn("size-5", filled ? "text-white" : "text-zinc-700")} aria-hidden="true" />;
+        // zinc-700 (the original unfilled color) sits at ~1.8:1 contrast against the app's
+        // #111111 background -- well under WCAG's 3:1 floor even for graphical icons, so an
+        // empty slot read as "not there" rather than "there but dim". zinc-500 clears that.
+        return <Icon key={slot} className={cn("size-5", filled ? "text-white" : "text-gray-500")} aria-hidden="true" />;
       })}
     </div>
   );

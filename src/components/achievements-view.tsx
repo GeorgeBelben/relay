@@ -104,7 +104,7 @@ function AchievementRow({ achievement }: { achievement: Achievement }) {
       ref={ref}
       className={cn(
         "flex items-center gap-3 rounded px-3 py-2 transition-bounce",
-        focused ? "bg-zinc-700" : "bg-zinc-800",
+        focused ? "bg-gray-700" : "bg-gray-800",
         !achievement.unlocked && "opacity-50",
       )}
     >

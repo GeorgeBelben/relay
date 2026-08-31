@@ -48,8 +48,8 @@ export function ListRow(props: ListRowProps) {
     <div
       ref={ref}
       className={cn("flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium rounded transition-bounce", {
-        "bg-zinc-700 my-1 py-5": focused,
-        "bg-zinc-800": !focused,
+        "bg-gray-700 my-1 py-5": focused,
+        "bg-gray-800": !focused,
       })}
     >
       <span>{label}</span>
@@ -91,7 +91,7 @@ function Checkbox({ checked }: { checked: boolean }) {
 // focus/hover transition in the app already uses.
 function Switch({ checked }: { checked: boolean }) {
   return (
-    <div className={cn("flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-bounce", checked ? "bg-zinc-500" : "bg-zinc-600")}>
+    <div className={cn("flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-bounce", checked ? "bg-gray-500" : "bg-gray-600")}>
       <div className={cn("h-4 w-4 rounded-full bg-white transition-bounce", checked && "translate-x-4")} />
     </div>
   );

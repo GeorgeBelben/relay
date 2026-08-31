@@ -38,7 +38,7 @@ function SystemLibrary() {
         <Header />
         <div className="space-y-1 pt-6 py-12 px-16">
           <h1 className="font-space-grotesk text-3xl font-bold">{shelf?.system_name ?? systemId}</h1>
-          <p className="text-zinc-400 font-space-mono">
+          <p className="text-gray-400 font-space-mono">
             {shelf?.games.length} {shelf?.games.length === 1 ? "game" : "games"}
           </p>
         </div>
