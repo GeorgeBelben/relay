@@ -8,6 +8,8 @@ Wants=plymouth-quit-wait.service
 [Service]
 Type=simple
 User=relay
+Environment=XCURSOR_THEME=relay-blank
+Environment=XCURSOR_SIZE=24
 PAMName=login
 TTYPath=/dev/tty1
 TTYReset=yes

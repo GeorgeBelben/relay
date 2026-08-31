@@ -1,0 +1,3 @@
+[Icon Theme]
+Name=Relay Blank
+Comment=Fully transparent cursor theme for the Relay kiosk -- controller-driven UI, no mouse input expected, so no cursor should ever be visible regardless of what any client requests.

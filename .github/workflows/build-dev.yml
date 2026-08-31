@@ -47,4 +47,5 @@ jobs:
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             packaging/systemd/relay.service
+            packaging/cursor-theme/relay-blank/**
           retention-days: 7

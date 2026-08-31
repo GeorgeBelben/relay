@@ -27,13 +27,19 @@ if [ -z "$DEB_FILE" ]; then
 fi
 
 SERVICE_FILE=$(find "$TMP_DIR" -name 'relay.service' | head -1)
+CURSOR_THEME_DIR=$(find "$TMP_DIR" -type d -name 'relay-blank' | head -1)
 
 mkdir -p "$DEST_DIR"
 rm -f "$DEST_DIR"/*.deb "$DEST_DIR/relay.service"
+rm -rf "$DEST_DIR/cursor-theme"
 cp "$DEB_FILE" "$DEST_DIR/"
 FINAL_DEB="$DEST_DIR/$(basename "$DEB_FILE")"
 if [ -n "$SERVICE_FILE" ]; then
   cp "$SERVICE_FILE" "$DEST_DIR/relay.service"
+fi
+if [ -n "$CURSOR_THEME_DIR" ]; then
+  mkdir -p "$DEST_DIR/cursor-theme"
+  cp -r "$CURSOR_THEME_DIR" "$DEST_DIR/cursor-theme/"
 fi
 
 echo "Installing $FINAL_DEB..."

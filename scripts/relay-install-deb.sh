@@ -16,6 +16,12 @@ fi
 dpkg -i "$DEB" || true
 apt-get install -f -y
 
+CURSOR_THEME=/opt/relay/incoming/cursor-theme/relay-blank
+if [ -d "$CURSOR_THEME" ]; then
+  rm -rf /usr/share/icons/relay-blank
+  cp -r "$CURSOR_THEME" /usr/share/icons/relay-blank
+fi
+
 SERVICE=/opt/relay/incoming/relay.service
 if [ -f "$SERVICE" ]; then
   cp "$SERVICE" /etc/systemd/system/relay.service
