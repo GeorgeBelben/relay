@@ -1,4 +1,4 @@
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 use crate::system::wallpaper;
 
@@ -23,4 +23,14 @@ pub async fn list_wallpapers() -> Vec<String> {
 #[tauri::command]
 pub fn quit(app: AppHandle) {
     app.exit(0);
+}
+
+/// `lib.rs`'s own `set_cursor_visible(false)` call at startup doesn't always take visual effect
+/// until the OS actually processes a mouse-moved event over the window -- the default arrow can
+/// sit visible for a moment after boot even though it's already been told to hide. Re-asserted
+/// from the frontend the instant real movement is detected (see main.tsx) closes that gap.
+#[tauri::command]
+pub fn hide_cursor(app: AppHandle) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or("main window must exist")?;
+    window.set_cursor_visible(false).map_err(crate::logging::err_to_string)
 }

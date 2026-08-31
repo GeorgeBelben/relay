@@ -136,6 +136,7 @@ pub fn run() {
             commands::system::get_username,
             commands::system::list_wallpapers,
             commands::system::quit,
+            commands::system::hide_cursor,
             commands::datetime::get_datetime_status,
             commands::datetime::list_timezones,
             commands::datetime::set_timezone,
