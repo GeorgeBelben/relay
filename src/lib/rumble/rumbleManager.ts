@@ -1,3 +1,5 @@
+import { getGamepads } from "@/lib/input";
+
 export type RumbleName = "nav" | "confirm" | "error";
 
 type Effect = { duration: number; weakMagnitude: number; strongMagnitude: number };
@@ -53,7 +55,7 @@ export function playRumble(name: RumbleName): void {
     lastNavPlayedAt = now;
   }
 
-  for (const pad of navigator.getGamepads()) {
+  for (const pad of getGamepads()) {
     if (!pad) continue;
     fireEffect(pad, EFFECTS[name]);
     if (name === "error") setTimeout(() => fireEffect(pad, EFFECTS.error), ERROR_PULSE_GAP_MS);

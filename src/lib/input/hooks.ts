@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getGamepads } from "./getGamepads";
 import { navEvents, rumbleEvents, soundEvents, startInputListeners } from "./nav";
 import { useInputMethodStore } from "./store";
 import type { NavEvent } from "./types";
@@ -27,7 +28,7 @@ export function useLastInputMethod() {
 }
 
 function readConnectedIndexes(): number[] {
-  return [...navigator.getGamepads()]
+  return [...getGamepads()]
     .filter((pad): pad is Gamepad => pad !== null)
     .map((pad) => pad.index)
     .sort((a, b) => a - b);

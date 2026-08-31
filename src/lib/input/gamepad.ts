@@ -1,3 +1,4 @@
+import { getGamepads } from "./getGamepads";
 import type { NavAction, NavDirection, NavEvent } from "./types";
 
 // Standard W3C Gamepad API "standard" mapping button indices -- what 8BitDo controllers (and
@@ -40,7 +41,7 @@ export function startGamepadListener(onEvent: (event: NavEvent) => void, onUsed:
     let usedThisFrame = false;
     let direction: NavDirection | null = null;
 
-    for (const pad of navigator.getGamepads()) {
+    for (const pad of getGamepads()) {
       if (!pad) continue;
 
       for (const [index, action] of Object.entries(BUTTON_ACTION_MAP)) {
