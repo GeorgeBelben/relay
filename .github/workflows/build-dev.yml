@@ -44,5 +44,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: relay-deb
-          path: src-tauri/target/release/bundle/deb/*.deb
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            packaging/systemd/relay.service
           retention-days: 7

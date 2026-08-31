@@ -26,10 +26,15 @@ if [ -z "$DEB_FILE" ]; then
   exit 1
 fi
 
+SERVICE_FILE=$(find "$TMP_DIR" -name 'relay.service' | head -1)
+
 mkdir -p "$DEST_DIR"
-rm -f "$DEST_DIR"/*.deb
+rm -f "$DEST_DIR"/*.deb "$DEST_DIR/relay.service"
 cp "$DEB_FILE" "$DEST_DIR/"
 FINAL_DEB="$DEST_DIR/$(basename "$DEB_FILE")"
+if [ -n "$SERVICE_FILE" ]; then
+  cp "$SERVICE_FILE" "$DEST_DIR/relay.service"
+fi
 
 echo "Installing $FINAL_DEB..."
 sudo /usr/local/sbin/relay-install-deb.sh

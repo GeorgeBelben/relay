@@ -15,3 +15,11 @@ fi
 # dpkg -i followed by apt --fix-broken install is the standard robust recipe instead.
 dpkg -i "$DEB" || true
 apt-get install -f -y
+
+SERVICE=/opt/relay/incoming/relay.service
+if [ -f "$SERVICE" ]; then
+  cp "$SERVICE" /etc/systemd/system/relay.service
+  systemctl daemon-reload
+  systemctl enable relay.service
+  systemctl restart relay.service
+fi

@@ -1,0 +1,27 @@
+[Unit]
+Description=Relay kiosk (cage + Relay app)
+Documentation=man:cage(1)
+Conflicts=getty@tty1.service
+After=getty@tty1.service systemd-user-sessions.service plymouth-quit-wait.service
+Wants=plymouth-quit-wait.service
+
+[Service]
+Type=simple
+User=relay
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+ExecStart=/usr/bin/cage -- /usr/bin/relay
+Restart=always
+RestartSec=2
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target
