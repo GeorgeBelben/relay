@@ -75,6 +75,20 @@ export function useSetRumbleEnabled() {
   });
 }
 
+export function useControllerType(): ControllerType {
+  const { data } = useGeneralSettings();
+  return data?.controller_type ?? "xbox";
+}
+
+export function useSetControllerType() {
+  const invalidate = useInvalidateGeneralSettings();
+  return useMutation({
+    mutationFn: (controllerType: ControllerType) =>
+      invoke<void>("set_controller_type", { controllerType }),
+    onSuccess: invalidate,
+  });
+}
+
 export function useActiveProfileId(): string | null {
   const { data } = useGeneralSettings();
   return data?.active_profile_id ?? null;
@@ -99,7 +113,8 @@ export function useWallpaper(): string {
 export function useSetWallpaper() {
   const invalidate = useInvalidateGeneralSettings();
   return useMutation({
-    mutationFn: (wallpaper: string) => invoke<void>("set_wallpaper", { wallpaper: wallpaper || null }),
+    mutationFn: (wallpaper: string) =>
+      invoke<void>("set_wallpaper", { wallpaper: wallpaper || null }),
     onSuccess: invalidate,
   });
 }

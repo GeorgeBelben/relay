@@ -4,10 +4,15 @@ import { RiImageEditLine, RiLoader4Line } from "@remixicon/react";
 import { toast } from "sonner";
 import { Drawer } from "./drawer";
 import { List, ListRow } from "./list";
-import { FocusContext, scrollFocusedIntoView, useBackHandler, useFocusable } from "@/lib/focus";
+import { AchievementsView } from "./achievements-view";
+import { FocusContext, useBackHandler, useFocusable } from "@/lib/focus";
 import { playSound } from "@/lib/sound";
 import { cn } from "@/lib/cn";
-import { useAchievements, useApplyMatch, useSearchAlternateMatches, type AlternateMatch, type Achievement } from "@/hooks/use-game-actions";
+import {
+  useApplyMatch,
+  useSearchAlternateMatches,
+  type AlternateMatch,
+} from "@/hooks/use-game-actions";
 import type { LibraryGame } from "@/hooks/use-library";
 
 type GameCardDrawerProps = {
@@ -58,9 +63,15 @@ export function GameCardDrawer({ game, open, onClose }: GameCardDrawerProps) {
       className={view !== "menu" ? "max-w-[66vw]" : undefined}
     >
       {view === "menu" && (
-        <GameCardMenu game={game} onChangeBoxArt={() => setView("picker")} onAchievements={() => setView("achievements")} />
+        <GameCardMenu
+          game={game}
+          onChangeBoxArt={() => setView("picker")}
+          onAchievements={() => setView("achievements")}
+        />
       )}
-      {view === "picker" && <BoxArtPicker game={game} onBack={backToMenu} onApplied={closeAndReset} />}
+      {view === "picker" && (
+        <BoxArtPicker game={game} onBack={backToMenu} onApplied={closeAndReset} />
+      )}
       {view === "achievements" && <AchievementsView game={game} onBack={backToMenu} />}
     </Drawer>
   );
@@ -89,7 +100,15 @@ function GameCardMenu({
   );
 }
 
-function BoxArtPicker({ game, onBack, onApplied }: { game: LibraryGame; onBack: () => void; onApplied: () => void }) {
+function BoxArtPicker({
+  game,
+  onBack,
+  onApplied,
+}: {
+  game: LibraryGame;
+  onBack: () => void;
+  onApplied: () => void;
+}) {
   const queryClient = useQueryClient();
 
   // Back from the picker returns to the menu, not close-the-drawer -- registered while this view
@@ -113,7 +132,10 @@ function BoxArtPicker({ game, onBack, onApplied }: { game: LibraryGame; onBack: 
   // container before the search resolves would have nothing to land on. saveLastFocusedChild is
   // required for focusSelf() to actually descend into the first tile rather than just focusing
   // this container itself (see drawer.tsx for the same gap and why it matters).
-  const { ref, focusKey, focusSelf } = useFocusable({ trackChildren: true, saveLastFocusedChild: true });
+  const { ref, focusKey, focusSelf } = useFocusable({
+    trackChildren: true,
+    saveLastFocusedChild: true,
+  });
   useEffect(() => {
     if (alternates.data) focusSelf();
   }, [alternates.data, focusSelf]);
@@ -132,10 +154,14 @@ function BoxArtPicker({ game, onBack, onApplied }: { game: LibraryGame; onBack: 
           </p>
         )}
 
-        {alternates.isError && <p className="px-4 py-6 text-sm text-destructive">Couldn't search SteamGridDB.</p>}
+        {alternates.isError && (
+          <p className="px-4 py-6 text-sm text-destructive">Couldn't search SteamGridDB.</p>
+        )}
 
         {alternates.data && alternates.data.length === 0 && (
-          <p className="px-4 py-6 text-sm text-muted-foreground">No other matches found for "{game.title}".</p>
+          <p className="px-4 py-6 text-sm text-muted-foreground">
+            No other matches found for "{game.title}".
+          </p>
         )}
 
         {alternates.data && alternates.data.length > 0 && (
@@ -144,11 +170,18 @@ function BoxArtPicker({ game, onBack, onApplied }: { game: LibraryGame; onBack: 
               <AlternateTile
                 key={candidate.steamgriddb_id}
                 candidate={candidate}
-                applying={applyMatch.isPending && applyMatch.variables?.steamgriddbId === candidate.steamgriddb_id}
+                applying={
+                  applyMatch.isPending &&
+                  applyMatch.variables?.steamgriddbId === candidate.steamgriddb_id
+                }
                 disabled={applyMatch.isPending}
                 onSelect={() =>
                   applyMatch.mutate(
-                    { gameId: game.id, steamgriddbId: candidate.steamgriddb_id, title: candidate.title },
+                    {
+                      gameId: game.id,
+                      steamgriddbId: candidate.steamgriddb_id,
+                      title: candidate.title,
+                    },
                     {
                       onSuccess: () => {
                         queryClient.invalidateQueries({ queryKey: ["library"] });
@@ -189,117 +222,27 @@ function AlternateTile({
         disabled && !applying && "opacity-40",
       )}
     >
-      {candidate.boxart_url && <img src={candidate.boxart_url} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+      {candidate.boxart_url && (
+        <img
+          src={candidate.boxart_url}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
       {applying && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <RiLoader4Line className="h-6 w-6 animate-spin text-white" aria-hidden="true" />
         </div>
       )}
       {!candidate.boxart_url && !applying && (
-        <RiImageEditLine className="absolute inset-0 m-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
+        <RiImageEditLine
+          className="absolute inset-0 m-auto h-6 w-6 text-muted-foreground"
+          aria-hidden="true"
+        />
       )}
-      <span className="relative line-clamp-2 text-xs font-medium text-white drop-shadow">{candidate.title}</span>
-    </div>
-  );
-}
-
-// Read-only -- no candidates to pick between the way BoxArtPicker has, just RetroAchievements'
-// own answer for "is this game matched, and what has the player earned." null (as opposed to an
-// error) specifically means "not matched to a RetroAchievements game" -- unsupported system, no
-// RA entry for this ROM, or no profile is RA-linked -- all of which read the same to a player:
-// nothing to show here (yet).
-const AWARD_LABELS: Record<string, string> = {
-  "beaten-softcore": "Beaten",
-  "beaten-hardcore": "Beaten (Hardcore)",
-  completed: "Completed",
-  mastered: "Mastered",
-};
-
-function AchievementsView({ game, onBack }: { game: LibraryGame; onBack: () => void }) {
-  useBackHandler(onBack);
-  const queryClient = useQueryClient();
-
-  const progress = useAchievements(game.id);
-
-  // Same reasoning as BoxArtPicker's identical hook -- Drawer's own focusSelf() only runs when
-  // the drawer opens, not on this view switch, and the row that had it in the menu view unmounts
-  // when this view swaps in. Keyed on the data arriving since there's nothing to focus into
-  // before then. Also invalidates the library queries here -- this fetch is what persists
-  // game.beaten server-side (get_achievements), so the tile this drawer opened from should
-  // reflect it without needing a manual rescan/renavigate.
-  const { ref, focusKey, focusSelf } = useFocusable({ trackChildren: true, saveLastFocusedChild: true });
-  useEffect(() => {
-    if (progress.data) {
-      focusSelf();
-      queryClient.invalidateQueries({ queryKey: ["library"] });
-    }
-  }, [progress.data, focusSelf, queryClient]);
-
-  return (
-    <FocusContext.Provider value={focusKey}>
-      <div ref={ref}>
-        <h2 className="truncate px-4 pb-2 text-base font-semibold">{game.title} -- Achievements</h2>
-
-        {progress.isPending && (
-          <p className="flex items-center gap-2 px-4 py-6 text-sm text-muted-foreground">
-            <RiLoader4Line className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Loading achievements…
-          </p>
-        )}
-
-        {progress.isError && <p className="px-4 py-6 text-sm text-destructive">{(progress.error as Error).message}</p>}
-
-        {progress.data === null && (
-          <p className="px-4 py-6 text-sm text-muted-foreground">Not matched to a RetroAchievements game.</p>
-        )}
-
-        {progress.data && (
-          <>
-            <div className="flex items-center gap-2 px-4 pb-3">
-              <p className="text-sm text-muted-foreground">
-                {progress.data.num_awarded_to_user} / {progress.data.num_achievements} unlocked ({progress.data.user_completion})
-              </p>
-              {progress.data.highest_award_kind && (
-                <span className="rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                  {AWARD_LABELS[progress.data.highest_award_kind] ?? progress.data.highest_award_kind}
-                </span>
-              )}
-            </div>
-            <div className="space-y-1 px-4 pb-4">
-              {progress.data.achievements.map((achievement) => (
-                <AchievementRow key={achievement.id} achievement={achievement} />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    </FocusContext.Provider>
-  );
-}
-
-function AchievementRow({ achievement }: { achievement: Achievement }) {
-  // Focusable purely so d-pad down can reach (and scroll to) achievements past the fold -- with
-  // no mouse in the picture, focus movement is the only thing that can drive scrolling here.
-  // onEnterPress deliberately omitted: there's nothing to *do* to an achievement, just look at it.
-  const { ref, focused } = useFocusable({
-    onFocus: () => scrollFocusedIntoView(ref.current),
-  });
-
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "flex items-center gap-3 rounded px-3 py-2 transition-bounce",
-        focused ? "bg-zinc-700" : "bg-zinc-800",
-        !achievement.unlocked && "opacity-50",
-      )}
-    >
-      <img src={achievement.badge_url} alt="" className="size-10 shrink-0 rounded" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{achievement.title}</p>
-        <p className="truncate text-xs text-muted-foreground">{achievement.description}</p>
-      </div>
-      <span className="shrink-0 text-xs font-medium text-muted-foreground">{achievement.points}pt</span>
+      <span className="relative line-clamp-2 text-xs font-medium text-white drop-shadow">
+        {candidate.title}
+      </span>
     </div>
   );
 }

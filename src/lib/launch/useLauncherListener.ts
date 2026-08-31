@@ -17,6 +17,7 @@ const MIN_LOGO_DURATION_MS = 1500;
 export function useLauncherListener() {
   const phase = useLaunchStore((state) => state.phase);
   const setPhase = useLaunchStore((state) => state.setPhase);
+  const enterPlaying = useLaunchStore((state) => state.enterPlaying);
   const dismiss = useLaunchStore((state) => state.dismiss);
 
   // Both read inside the status handler below via refs, not state -- they're only ever
@@ -41,7 +42,10 @@ export function useLauncherListener() {
       if (status.state === "error" || status.state === "crashed") {
         playSound("error");
         playRumble("error");
-        const message = status.state === "error" ? status.message : `Emulator exited unexpectedly (code ${status.exit_code ?? "?"})`;
+        const message =
+          status.state === "error"
+            ? status.message
+            : `Emulator exited unexpectedly (code ${status.exit_code ?? "?"})`;
         setPhase("error", message);
         return;
       }
@@ -49,15 +53,16 @@ export function useLauncherListener() {
       if (status.state === "running") {
         const elapsed = Date.now() - (logoStartedAt.current ?? 0);
         const remaining = Math.max(0, MIN_LOGO_DURATION_MS - elapsed);
-        setTimeout(dismiss, remaining);
+        setTimeout(enterPlaying, remaining);
         return;
       }
 
-      // "exited": the emulator's already closed -- if the overlay is still up (a launch that
-      // failed silently before reaching "running", or exited faster than the minimum logo beat),
-      // there's nothing left to wait for. Leaves an already-shown error alone rather than
-      // clobbering it -- the player needs to actually see and dismiss that, not have it vanish
-      // out from under them.
+      // "exited": the emulator's actually closed now -- whether that's the normal end of a play
+      // session (quick menu's Quit, or the player closing the emulator's own UI) or a launch that
+      // failed/exited before ever reaching "running". Either way there's nothing left to show;
+      // full reset via dismiss() also closes the quick menu if it happened to still be open.
+      // Leaves an already-shown error alone rather than clobbering it -- the player needs to
+      // actually see and dismiss that, not have it vanish out from under them.
       if (status.state === "exited" && phaseRef.current !== "error") {
         dismiss();
       }
@@ -66,5 +71,5 @@ export function useLauncherListener() {
     return () => {
       unlisten.then((f) => f());
     };
-  }, [setPhase, dismiss]);
+  }, [setPhase, enterPlaying, dismiss]);
 }

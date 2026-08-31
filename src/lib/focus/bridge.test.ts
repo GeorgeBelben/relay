@@ -1,7 +1,11 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { navEvents } from "@/lib/input/nav";
+import { useLaunchStore } from "@/lib/launch/store";
+import { handleMenu } from "./menuHandler";
 import { useFocusBridge } from "./bridge";
+
+vi.mock("./menuHandler", () => ({ handleMenu: vi.fn() }));
 
 const { navigateByDirection, onEnterPress, onEnterRelease } = vi.hoisted(() => ({
   navigateByDirection: vi.fn(),
@@ -41,6 +45,26 @@ describe("useFocusBridge", () => {
     navEvents.emit({ type: "action", action: "back" });
 
     expect(handleBack).toHaveBeenCalled();
+  });
+
+  it("forwards menu actions to handleMenu when no game is playing", () => {
+    renderHook(() => useFocusBridge());
+
+    navEvents.emit({ type: "action", action: "menu" });
+
+    expect(handleMenu).toHaveBeenCalled();
+  });
+
+  it("does not forward menu actions to handleMenu while a game is playing (REL-23's quick menu owns it instead)", () => {
+    vi.mocked(handleMenu).mockClear();
+    useLaunchStore.setState({ phase: "playing" });
+    renderHook(() => useFocusBridge());
+
+    navEvents.emit({ type: "action", action: "menu" });
+
+    expect(handleMenu).not.toHaveBeenCalled();
+
+    useLaunchStore.setState({ phase: "idle" });
   });
 
   it("stops forwarding once unmounted", () => {

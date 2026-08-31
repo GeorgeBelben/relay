@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::db::{games, roms, settings};
 use crate::emulator::command::{build_launch_command, RetroarchOptions, SystemLaunchConfig};
 use crate::emulator::process::{self, LauncherStatus};
+use crate::emulator::retroarch_command;
 use crate::emulator::retroarch_config::{self, GameLaunchDirs};
 use crate::ingestion::paths;
 use crate::systems;
@@ -38,6 +39,20 @@ pub fn get_launcher_status(state: State<'_, LauncherState>) -> LauncherStatus {
 #[tauri::command]
 pub fn kill_game(state: State<'_, LauncherState>) -> Result<(), String> {
     process::kill(&state.active_pid).map_err(crate::logging::err_to_string)
+}
+
+/// Fire-and-forget over RetroArch's UDP command port (REL-23) -- a silent no-op for a
+/// standalone-emulator game (Dolphin/PCSX2/yabause-qt have no such interface) or when nothing's
+/// running, rather than an error, since the frontend can't always know which case applies before
+/// the player presses the quick-menu's Pause/Save action.
+#[tauri::command]
+pub async fn pause_toggle_game() -> Result<(), String> {
+    retroarch_command::send_command("PAUSE_TOGGLE").await.map_err(crate::logging::err_to_string)
+}
+
+#[tauri::command]
+pub async fn save_state_game() -> Result<(), String> {
+    retroarch_command::send_command("SAVE_STATE").await.map_err(crate::logging::err_to_string)
 }
 
 #[tauri::command]

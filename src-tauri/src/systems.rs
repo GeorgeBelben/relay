@@ -63,7 +63,9 @@ pub const ALL: &[SystemDef] = &[
         id: "nds",
         name: "Nintendo DS",
         extensions: &["nds"],
-        retroarch_core: Some("melonds"),
+        // melonDS isn't packaged in Ubuntu's default repos (checked against the real device,
+        // REL-136) -- desmume is, and is the standard fallback libretro NDS core.
+        retroarch_core: Some("desmume"),
         standalone_binary: None,
     },
     SystemDef {
@@ -84,7 +86,9 @@ pub const ALL: &[SystemDef] = &[
         id: "psx",
         name: "PlayStation",
         extensions: &["cue", "chd", "pbp"],
-        retroarch_core: Some("pcsx_rearmed"),
+        // pcsx_rearmed isn't packaged in Ubuntu's default repos (checked against the real
+        // device, REL-136) -- mednafen_psx ("Beetle PSX", package libretro-beetle-psx) is.
+        retroarch_core: Some("mednafen_psx"),
         standalone_binary: None,
     },
     SystemDef {
@@ -126,8 +130,10 @@ pub const ALL: &[SystemDef] = &[
         id: "saturn",
         name: "Sega Saturn",
         extensions: &["cue", "chd"],
-        retroarch_core: Some("mednafen_saturn"),
-        standalone_binary: None,
+        // mednafen_saturn has no packaged libretro core in Ubuntu's default repos (checked
+        // against the real device, REL-136) -- yabause-qt is the closest packaged standalone.
+        retroarch_core: None,
+        standalone_binary: Some("yabause-qt"),
     },
     SystemDef {
         id: "dreamcast",

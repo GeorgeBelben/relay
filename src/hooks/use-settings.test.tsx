@@ -4,7 +4,9 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
   useActiveProfileId,
+  useControllerType,
   useSetActiveProfileId,
+  useSetControllerType,
   useSetSetting,
   useSetting,
   useSetWallpaper,
@@ -37,7 +39,10 @@ describe("useSetting cache invalidation", () => {
     );
 
     const { result } = renderHook(
-      () => ({ setting: useSetting("steamgriddbApiKey"), setSetting: useSetSetting("steamgriddbApiKey") }),
+      () => ({
+        setting: useSetting("steamgriddbApiKey"),
+        setSetting: useSetSetting("steamgriddbApiKey"),
+      }),
       { wrapper },
     );
 
@@ -82,7 +87,10 @@ describe("useWallpaper / useSetWallpaper / useWallpaperOptions", () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
-    const { result } = renderHook(() => ({ wallpaper: useWallpaper(), setWallpaper: useSetWallpaper() }), { wrapper });
+    const { result } = renderHook(
+      () => ({ wallpaper: useWallpaper(), setWallpaper: useSetWallpaper() }),
+      { wrapper },
+    );
 
     await waitFor(() => expect(result.current.wallpaper).toBe(""));
 
@@ -133,6 +141,45 @@ describe("useWallpaper / useSetWallpaper / useWallpaperOptions", () => {
   });
 });
 
+describe("useControllerType / useSetControllerType", () => {
+  it("defaults to xbox and updates via set_controller_type", async () => {
+    let settings = generalSettings({});
+
+    invokeMock.mockImplementation((cmd: string, args?: Record<string, unknown>) => {
+      if (cmd === "get_general_settings") return Promise.resolve(settings);
+      if (cmd === "set_controller_type") {
+        settings = {
+          ...settings,
+          controller_type: args!.controllerType as GeneralSettings["controller_type"],
+        };
+        return Promise.resolve(undefined);
+      }
+      throw new Error(`unexpected invoke: ${cmd}`);
+    });
+
+    const queryClient = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(
+      () => ({ controllerType: useControllerType(), setControllerType: useSetControllerType() }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.controllerType).toBe("xbox"));
+
+    await act(async () => {
+      await result.current.setControllerType.mutateAsync("playstation");
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("set_controller_type", {
+      controllerType: "playstation",
+    });
+    await waitFor(() => expect(result.current.controllerType).toBe("playstation"));
+  });
+});
+
 describe("useActiveProfileId / useSetActiveProfileId", () => {
   it("defaults to null and updates via set_active_profile_id", async () => {
     let settings = generalSettings({});
@@ -151,7 +198,13 @@ describe("useActiveProfileId / useSetActiveProfileId", () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
-    const { result } = renderHook(() => ({ activeProfileId: useActiveProfileId(), setActiveProfileId: useSetActiveProfileId() }), { wrapper });
+    const { result } = renderHook(
+      () => ({
+        activeProfileId: useActiveProfileId(),
+        setActiveProfileId: useSetActiveProfileId(),
+      }),
+      { wrapper },
+    );
 
     await waitFor(() => expect(result.current.activeProfileId).toBeNull());
 

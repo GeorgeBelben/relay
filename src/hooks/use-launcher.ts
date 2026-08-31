@@ -84,3 +84,18 @@ export function useKillGame() {
     mutationFn: () => invoke<void>("kill_game"),
   });
 }
+
+// Both fire-and-forget over RetroArch's UDP command port (REL-23) -- a silent no-op rather than
+// an error for a standalone-emulator game (Dolphin/PCSX2/yabause-qt have no such interface), so
+// callers don't need to check which kind of game is running before calling.
+export function usePauseToggleGame() {
+  return useMutation({
+    mutationFn: () => invoke<void>("pause_toggle_game"),
+  });
+}
+
+export function useSaveStateGame() {
+  return useMutation({
+    mutationFn: () => invoke<void>("save_state_game"),
+  });
+}

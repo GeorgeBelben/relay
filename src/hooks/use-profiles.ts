@@ -15,11 +15,20 @@ export type ProfileSummary = {
 const PROFILES_KEY = ["profiles"] as const;
 
 export function useProfiles() {
-  return useQuery({ queryKey: PROFILES_KEY, queryFn: () => invoke<ProfileSummary[]>("list_profiles") });
+  return useQuery({
+    queryKey: PROFILES_KEY,
+    queryFn: () => invoke<ProfileSummary[]>("list_profiles"),
+  });
 }
 
-export function useProfile(id: string) {
-  return useQuery({ queryKey: [...PROFILES_KEY, id], queryFn: () => invoke<ProfileSummary | null>("get_profile", { id }) });
+// `id` accepts null so callers keyed off useActiveProfileId() (no profile selected yet) don't
+// need to skip the hook call entirely -- just returns no data instead of querying.
+export function useProfile(id: string | null) {
+  return useQuery({
+    queryKey: [...PROFILES_KEY, id],
+    queryFn: () => invoke<ProfileSummary | null>("get_profile", { id }),
+    enabled: id != null,
+  });
 }
 
 function useInvalidateProfiles() {
@@ -38,7 +47,8 @@ export function useCreateProfile() {
 export function useRenameProfile() {
   const invalidate = useInvalidateProfiles();
   return useMutation({
-    mutationFn: (args: { id: string; name: string }) => invoke<ProfileSummary>("rename_profile", { id: args.id, name: args.name }),
+    mutationFn: (args: { id: string; name: string }) =>
+      invoke<ProfileSummary>("rename_profile", { id: args.id, name: args.name }),
     onSuccess: invalidate,
   });
 }
@@ -61,7 +71,11 @@ export function useLinkRaWebApi() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (args: { profileId: string; username: string; webApiKey: string }) =>
-      invoke<void>("link_ra_web_api", { profileId: args.profileId, username: args.username, webApiKey: args.webApiKey }),
+      invoke<void>("link_ra_web_api", {
+        profileId: args.profileId,
+        username: args.username,
+        webApiKey: args.webApiKey,
+      }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: PROFILES_KEY });
       queryClient.invalidateQueries({ queryKey: raStatsKey(variables.profileId) });
@@ -73,7 +87,11 @@ export function useLinkRaConnectAccount() {
   const invalidate = useInvalidateProfiles();
   return useMutation({
     mutationFn: (args: { profileId: string; username: string; password: string }) =>
-      invoke<void>("link_ra_connect_account", { profileId: args.profileId, username: args.username, password: args.password }),
+      invoke<void>("link_ra_connect_account", {
+        profileId: args.profileId,
+        username: args.username,
+        password: args.password,
+      }),
     onSuccess: invalidate,
   });
 }
