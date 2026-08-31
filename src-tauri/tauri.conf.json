@@ -13,7 +13,8 @@
     "windows": [
       {
         "title": "Relay",
-        "fullscreen": false
+        "fullscreen": false,
+        "decorations": false
       }
     ],
     "security": {
