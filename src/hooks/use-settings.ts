@@ -74,3 +74,32 @@ export function useSetRumbleEnabled() {
     onSuccess: invalidate,
   });
 }
+
+// "" means no wallpaper picked -- matches the backend's own default (settings.rs's wallpaper
+// column), so there's one canonical "none" value instead of undefined/null/"" all meaning the
+// same thing.
+export function useWallpaper(): string {
+  const { data } = useGeneralSettings();
+  return data?.wallpaper ?? "";
+}
+
+export function useSetWallpaper() {
+  const invalidate = useInvalidateGeneralSettings();
+  return useMutation({
+    mutationFn: (wallpaper: string) => invoke<void>("set_wallpaper", { wallpaper: wallpaper || null }),
+    onSuccess: invalidate,
+  });
+}
+
+// Filenames available in ~/Relay/wallpapers, for the picker in Settings. Resolving a filename
+// into a loadable image URL is left to whatever component actually renders it (wallpaper-picker.tsx,
+// __root.tsx's background) -- same "not this hook's job" reasoning as use-library.ts's boxart_path.
+export function useWallpaperOptions(): string[] {
+  const { data } = useQuery({
+    queryKey: ["wallpaper", "list"],
+    queryFn: () => invoke<string[]>("list_wallpapers"),
+  });
+  return data ?? EMPTY_WALLPAPER_OPTIONS;
+}
+
+const EMPTY_WALLPAPER_OPTIONS: string[] = [];

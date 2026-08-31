@@ -2,3 +2,4 @@
 pub mod bluetooth;
 pub mod network;
 pub mod storage;
+pub mod wallpaper;

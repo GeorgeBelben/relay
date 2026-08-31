@@ -106,6 +106,9 @@ pub fn run() {
             commands::library::list_recently_added_games,
             commands::game_actions::search_alternate_matches,
             commands::game_actions::apply_match,
+            commands::system::get_username,
+            commands::system::list_wallpapers,
+            commands::system::quit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

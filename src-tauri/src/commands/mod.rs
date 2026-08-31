@@ -10,4 +10,5 @@ pub mod profiles;
 pub mod roms;
 pub mod settings;
 pub mod storage;
+pub mod system;
 pub mod systems;
