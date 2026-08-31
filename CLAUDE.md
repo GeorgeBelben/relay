@@ -37,6 +37,7 @@ This repo is a **ground-up rewrite** from Electron to **Tauri v2 + Rust**, with 
 | State management | React Query + Tauri events for backend state | Backend is the source of truth for almost everything |
 | Emulator management | Deep integration (crash detection, log capture), phased | Launch-and-forget feels like a regression for a "first-party" console |
 | Migration | None — re-ingest test/real data fresh | No legacy DB to preserve |
+| Window fullscreen | `fullscreen: false` in `tauri.conf.json`; let cage size the window, not Tauri's native fullscreen | Requesting native Wayland fullscreen at window creation crashes this device's cage/wlroots (`wlr_xdg_surface_schedule_configure` assertion) — cage already fills the output for its single kiosk client regardless |
 
 ## Build & dev commands
 
