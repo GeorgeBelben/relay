@@ -5,6 +5,7 @@ use tokio::net::UnixListener;
 
 mod emulator;
 mod retroarch;
+mod startup;
 
 use emulator::EmulatorBackend;
 
@@ -16,6 +17,8 @@ type SharedState = Arc<Mutex<Option<RunningGame>>>;
 
 #[tokio::main]
 async fn main() {
+    startup::ensure_directories();
+
     // Remove any leftover socket file from the previous run - Unix sockets
     // fail to bind if the path already exists
     let _ = std::fs::remove_file(SOCKET_PATH);

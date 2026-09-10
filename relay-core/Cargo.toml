@@ -7,3 +7,4 @@ edition = "2024"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
 serde_json = "1"
 relay-protocol = { path = "../relay-protocol" }
+dirs = "7"
