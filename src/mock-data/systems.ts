@@ -1,0 +1,68 @@
+import { System } from "../types/system";
+
+export const systems: Record<string, System> = {
+  nes: {
+    slug: "nes",
+    name: "Nintendo Entertainment System",
+    manufacturer: "Nintendo",
+    generation: 3,
+    coreBackend: "retroarch",
+    releaseYear: 1985,
+  },
+  snes: {
+    slug: "snes",
+    name: "Super Nintendo Entertainment System",
+    manufacturer: "Nintendo",
+    generation: 4,
+    coreBackend: "retroarch",
+    releaseYear: 1990,
+  },
+  n64: {
+    slug: "n64",
+    name: "Nintendo 64",
+    manufacturer: "Nintendo",
+    generation: 5,
+    coreBackend: "retroarch",
+    releaseYear: 1996,
+  },
+  gamecube: {
+    slug: "gamecube",
+    name: "Nintendo GameCube",
+    manufacturer: "Nintendo",
+    generation: 6,
+    coreBackend: "dolphin",
+    releaseYear: 2001,
+  },
+  ps1: {
+    slug: "ps1",
+    name: "PlayStation",
+    manufacturer: "Sony",
+    generation: 5,
+    coreBackend: "retroarch",
+    releaseYear: 1994,
+  },
+  ps2: {
+    slug: "ps2",
+    name: "PlayStation 2",
+    manufacturer: "Sony",
+    generation: 6,
+    coreBackend: "pcsx2",
+    releaseYear: 2000,
+  },
+  genesis: {
+    slug: "genesis",
+    name: "Sega Genesis",
+    manufacturer: "Sega",
+    generation: 4,
+    coreBackend: "retroarch",
+    releaseYear: 1988,
+  },
+  gba: {
+    slug: "gba",
+    name: "Game Boy Advance",
+    manufacturer: "Nintendo",
+    generation: 6,
+    coreBackend: "retroarch",
+    releaseYear: 2001,
+  },
+};
