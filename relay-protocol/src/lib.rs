@@ -17,20 +17,27 @@ pub enum Response {
     /// Reply to `Request::Ping`.
     Pong,
     /// A game was successfully launched.
-    GameLaunched { pid: u32 },
+    GameLaunched {
+        pid: u32,
+    },
     /// A previously-launched game process exited.
-    GameExited { exit_code: Option<i32> },
+    GameExited {
+        exit_code: Option<i32>,
+    },
     /// Reply to `Request::GetState`.
     State(DaemonState),
+    Error {
+        message: String,
+    },
 }
 
 /// A snapshot of what the daemon currently knows.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonState {
     pub running_game: Option<RunningGame>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunningGame {
     pub pid: u32,
     pub rom_path: String,

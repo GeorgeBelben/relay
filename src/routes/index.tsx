@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { games } from "@/mock-data/games";
 // import { FocusableLink } from "@/components/focusable";
@@ -10,6 +10,8 @@ import { Game } from "@/types/games";
 import { rememberFocus, restoreFocus } from "@/lib/focus/restore";
 import { RecentGamesRow } from "@/components/recent-games-row";
 import { useActionHints } from "@/lib/hints";
+import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -32,7 +34,7 @@ function Index() {
 
 function RecentGames() {
 
-  const { navigate } = useRouter();
+  // const { navigate } = useRouter();
   const { ref, focusKey, focusSelf } = useFocusable({ focusKey: 'RECENT_GAMES' });
 
   const [focusedGame, setFocusedGame] = useState<Game | null>(null);
@@ -48,8 +50,16 @@ function RecentGames() {
     restoreFocus('recent-games', focusSelf);
   }, [focusSelf]);
 
-  const handleOnSelectGame = (game: Game) => {
-    navigate({ to: "/games/$gameId", params: { gameId: game.id } });
+  const handleOnSelectGame = async (game: Game) => {
+    try {
+      const response = await invoke<string>("launch_game", { romPath: game.id });
+      console.log(response);
+    } catch (e) {
+      console.error(e);
+      toast.error("Couldn't launch game");
+    }
+
+    // navigate({ to: "/games/$gameId", params: { gameId: game.id } });
   }
 
   const handleOnFocusGame = (game: Game) => {

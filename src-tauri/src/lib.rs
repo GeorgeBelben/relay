@@ -1,11 +1,5 @@
 mod daemon;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[tauri::command]
 async fn check_daemon_connection() -> Result<String, String> {
     match daemon::ping_daemon().await {
@@ -14,12 +8,23 @@ async fn check_daemon_connection() -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+async fn launch_game(rom_path: String) -> Result<String, String> {
+    match daemon::launch_game(&rom_path).await? {
+        relay_protocol::Response::GameLaunched { pid } => Ok(format!("launched, pid {pid}")),
+        relay_protocol::Response::Error { message } => Err(message),
+        other => Err(format!("unexpected response: {other:?}")),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
-        .invoke_handler(tauri::generate_handler![check_daemon_connection])
+        .invoke_handler(tauri::generate_handler![
+            check_daemon_connection,
+            launch_game
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
