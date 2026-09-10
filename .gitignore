@@ -24,6 +24,7 @@ src/routeTree.gen.ts
 !.vscode/extensions.json
 .idea
 .DS_Store
+.deploy-relay-core.state
 *.suo
 *.ntvs*
 *.njsproj

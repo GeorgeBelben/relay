@@ -1,0 +1,11 @@
+[Unit]
+Description=Relay core daemon
+After=network.target
+
+[Service]
+ExecStart=%h/.local/bin/relay-core
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

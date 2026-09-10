@@ -1,11 +1,14 @@
 import { useConnectedGamepads } from "@/lib/gamepad/use-connected-gamepads";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
+import { GlobeIcon } from '@phosphor-icons/react';
+import { useDaemonConnection } from "@/lib/daemon";
 
 export function Header() {
     const connectedGamepads = useConnectedGamepads();
+    const daemonStatus = useDaemonConnection();
 
-    console.log("connectedGamepads", connectedGamepads);
+    console.log("daemonStatus", daemonStatus);
 
     return (
         <div className="p-8 fixed inset-0 bottom-auto grid grid-cols-3">
@@ -25,8 +28,11 @@ export function Header() {
                             })} />
                         )
                     })}
-
                 </div>
+                <GlobeIcon size={20} className={cn({
+                    "text-green-500": daemonStatus === 'connected',
+                    "text-neutral-500": daemonStatus === 'disconnected'
+                })} />
             </div>
         </div>
     )
