@@ -3,12 +3,10 @@ use serde::{Deserialize, Serialize};
 /// Sent from a client (the UI or CLI) to the daemon.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Request {
-    /// Simple liveness check.
     Ping,
-    /// Ask the daemon to launch a game.
     LaunchGame { rom_path: String },
-    /// Ask the daemon for a full snapshot of current state.
     GetState,
+    GetLibrary,
 }
 
 /// Sent from the daemon back to a client.
@@ -16,6 +14,9 @@ pub enum Request {
 pub enum Response {
     /// Reply to `Request::Ping`.
     Pong,
+    Error {
+        message: String,
+    },
     /// A game was successfully launched.
     GameLaunched {
         pid: u32,
@@ -26,9 +27,7 @@ pub enum Response {
     },
     /// Reply to `Request::GetState`.
     State(DaemonState),
-    Error {
-        message: String,
-    },
+    Library(Vec<LibraryEntry>),
 }
 
 /// A snapshot of what the daemon currently knows.
@@ -41,4 +40,12 @@ pub struct DaemonState {
 pub struct RunningGame {
     pub pid: u32,
     pub rom_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LibraryEntry {
+    pub system: String,
+    pub file_name: String,
+    pub rom_path: String,
+    pub size_bytes: u64,
 }

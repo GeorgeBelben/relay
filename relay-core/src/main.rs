@@ -4,6 +4,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 
 mod emulator;
+mod library;
 mod retroarch;
 mod startup;
 
@@ -74,6 +75,7 @@ async fn handle_client(stream: tokio::net::UnixStream, state: SharedState) {
                 Response::State(DaemonState { running_game })
             }
             Request::LaunchGame { rom_path } => launch_game(rom_path, state.clone()),
+            Request::GetLibrary => Response::Library(library::scan_library()),
         };
 
         let mut json = serde_json::to_string(&response).unwrap();

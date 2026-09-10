@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 /// Every system we support a ROM subfolder for. Adjust freely — this is
 /// just a list, not something wired into logic elsewhere yet.
-const SUPPORTED_SYSTEMS: &[&str] = &[
+pub const SUPPORTED_SYSTEMS: &[&str] = &[
     "nes", "snes", "genesis", "n64", "gb", "gba", "psx", "ps2", "gamecube", "wii", "psp",
 ];
 

@@ -20,6 +20,7 @@ enum Command {
     State,
     // Launch a rom by an absolute path
     Launch { rom_path: String },
+    Library,
 }
 
 #[tokio::main]
@@ -30,6 +31,7 @@ async fn main() {
         Command::Ping => Request::Ping,
         Command::State => Request::GetState,
         Command::Launch { rom_path } => Request::LaunchGame { rom_path },
+        Command::Library => Request::GetLibrary,
     };
 
     match send(request).await {
@@ -68,15 +70,27 @@ async fn send(request: Request) -> Result<Response, String> {
 fn print_response(response: Response) {
     match response {
         Response::Pong => println!("Pong"),
+        Response::Error { message } => {
+            eprintln!("daemon error: {message}");
+            std::process::exit(1);
+        }
         Response::GameLaunched { pid } => println!("launched, pid {pid}"),
         Response::GameExited { exit_code } => println!("game exited, code {exit_code:?}"),
         Response::State(state) => match state.running_game {
             Some(game) => println!("running: {} (pid {})", game.rom_path, game.pid),
             None => println!("nothing running"),
         },
-        Response::Error { message } => {
-            eprintln!("daemon error: {message}");
-            std::process::exit(1);
+        Response::Library(entries) => {
+            if entries.is_empty() {
+                println!("library is empty")
+            } else {
+                for entry in entries {
+                    println!(
+                        "[{}] {} ({} bytes)",
+                        entry.system, entry.file_name, entry.size_bytes
+                    );
+                }
+            }
         }
     }
 }
