@@ -1,0 +1,10 @@
+[package]
+name = "relay-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+relay-protocol = { path = "../relay-protocol" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "relay-core/**"
+      - "relay-cli/**"
       - "relay-protocol/**"
       - "Cargo.toml"
       - "Cargo.lock"
@@ -14,18 +15,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Build relay-core
         run: cargo build --release -p relay-core
 
-      - name: Upload binary as artifact
-        uses: actions/upload-artifact@v4
+      - name: Build relay-cli
+        run: cargo build --release -p relay-cli
+
+      - uses: actions/upload-artifact@v4
         with:
           name: relay-core-binary
           path: target/release/relay-core
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relay-cli-binary
+          path: target/release/relay-cli
           retention-days: 14
