@@ -1,3 +1,6 @@
+mod emulator;
+mod retroarch;
+
 use relay_protocol::{DaemonState, Request, Response};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
