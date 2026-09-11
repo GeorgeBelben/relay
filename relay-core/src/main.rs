@@ -7,6 +7,7 @@ mod emulator;
 mod library;
 mod retroarch;
 mod startup;
+mod systems;
 
 use emulator::EmulatorBackend;
 

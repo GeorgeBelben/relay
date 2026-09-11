@@ -45,6 +45,7 @@ pub struct RunningGame {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryEntry {
     pub system: String,
+    pub system_display_name: String,
     pub file_name: String,
     pub rom_path: String,
     pub size_bytes: u64,

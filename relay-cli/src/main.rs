@@ -87,7 +87,7 @@ fn print_response(response: Response) {
                 for entry in entries {
                     println!(
                         "[{}] {} ({} bytes)",
-                        entry.system, entry.file_name, entry.size_bytes
+                        entry.system_display_name, entry.file_name, entry.size_bytes
                     );
                 }
             }

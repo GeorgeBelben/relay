@@ -1,4 +1,5 @@
-use crate::startup::{SUPPORTED_SYSTEMS, roms_dir};
+use crate::startup::roms_dir;
+use crate::systems::ALL_SYSTEMS;
 use relay_protocol::LibraryEntry;
 
 /// Scans every known system's ROM folder and returns what it finds.
@@ -7,8 +8,8 @@ use relay_protocol::LibraryEntry;
 pub fn scan_library() -> Vec<LibraryEntry> {
     let mut entries = Vec::new();
 
-    for system in SUPPORTED_SYSTEMS {
-        let system_dir = roms_dir().join(system);
+    for system in ALL_SYSTEMS {
+        let system_dir = roms_dir().join(system.id);
 
         let read_dir = match std::fs::read_dir(&system_dir) {
             Ok(rd) => rd,
@@ -22,7 +23,7 @@ pub fn scan_library() -> Vec<LibraryEntry> {
             let entry = match entry {
                 Ok(e) => e,
                 Err(e) => {
-                    eprintln!("bad directory entry in {system}: {e}");
+                    eprintln!("bad directory entry in {}: {e}", system.id);
                     continue;
                 }
             };
@@ -46,7 +47,8 @@ pub fn scan_library() -> Vec<LibraryEntry> {
                 .unwrap_or_default();
 
             entries.push(LibraryEntry {
-                system: system.to_string(),
+                system: system.id.to_string(),
+                system_display_name: system.display_name.to_string(),
                 file_name,
                 rom_path: path.to_string_lossy().to_string(),
                 size_bytes: metadata.len(),

@@ -1,10 +1,5 @@
+use crate::systems::ALL_SYSTEMS;
 use std::path::PathBuf;
-
-/// Every system we support a ROM subfolder for. Adjust freely — this is
-/// just a list, not something wired into logic elsewhere yet.
-pub const SUPPORTED_SYSTEMS: &[&str] = &[
-    "nes", "snes", "genesis", "n64", "gb", "gba", "psx", "ps2", "gamecube", "wii", "psp",
-];
 
 /// Ensures the directories relay-core needs actually exist, creating them
 /// if this is a fresh install. Called once at startup, before the daemon
@@ -18,8 +13,8 @@ pub fn ensure_directories() {
     create_dir(&data_dir);
 
     let library = library_root();
-    for system in SUPPORTED_SYSTEMS {
-        create_dir(&roms_dir().join(system));
+    for system in ALL_SYSTEMS {
+        create_dir(&roms_dir().join(system.id));
     }
 
     create_dir(&bios_dir());
