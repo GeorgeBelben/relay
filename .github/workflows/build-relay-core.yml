@@ -33,5 +33,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: relay-cli-binary
-          path: target/release/relay-cli
+          path: target/release/relay
           retention-days: 14

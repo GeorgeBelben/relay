@@ -61,7 +61,7 @@ deploy_run() {
   echo "Downloading artifacts from run $run_id..."
   gh run download "$run_id" -n "$CORE_ARTIFACT_NAME" -D "$tmp_dir"
   gh run download "$run_id" -n "$CLI_ARTIFACT_NAME" -D "$tmp_dir"
-  chmod +x "$tmp_dir/relay-core" "$tmp_dir/relay-cli"
+  chmod +x "$tmp_dir/relay-core" "$tmp_dir/relay"
 
   echo "Installing systemd --user unit..."
   remote "mkdir -p $REMOTE_BIN_DIR $REMOTE_UNIT_DIR"
@@ -69,7 +69,7 @@ deploy_run() {
 
   echo "Copying binaries to $REMOTE_HOST..."
   install_binary "$tmp_dir/relay-core" relay-core
-  install_binary "$tmp_dir/relay-cli" relay-cli
+  install_binary "$tmp_dir/relay" relay
 
   echo "Restarting service..."
   remote "systemctl --user daemon-reload && systemctl --user enable --now $SERVICE_NAME && systemctl --user restart $SERVICE_NAME"

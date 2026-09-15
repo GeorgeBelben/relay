@@ -6,7 +6,7 @@ use tokio::net::UnixStream;
 const SOCKET_PATH: &str = "/tmp/relay.sock";
 
 #[derive(Parser)]
-#[command(name = "relay-cli", about = "Talk to the relay-core daemon")]
+#[command(name = "relay", about = "Talk to the relay-core daemon")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
