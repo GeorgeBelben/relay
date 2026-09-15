@@ -15,8 +15,8 @@ impl EmulatorBackend for Pcsx2Backend {
         ensure_pcsx2_config("SCPH-70004.BIN");
 
         Command::new(PCSX2_BIN)
-            .arg("-batch")
             .arg("-fullscreen")
+            .arg("-nogui")
             .arg(rom_path)
             .envs(gamescope_env())
             .spawn()
