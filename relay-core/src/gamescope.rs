@@ -4,7 +4,7 @@ use std::process::Command;
 /// environment directly out of /proc, so anything we spawn can target
 /// the same Wayland display gamescope is compositing.
 pub fn gamescope_env() -> Vec<(String, String)> {
-    let output = Command::new("pgrep").arg("-x").arg("gamescope-wl").output();
+    let output = Command::new("pgrep").arg("-x").arg("gamescope").output();
     let Ok(output) = output else {
         return Vec::new();
     };
