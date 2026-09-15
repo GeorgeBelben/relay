@@ -19,7 +19,7 @@ enum Command {
     // Ask the daemon what's currently running
     State,
     // Launch a rom by an absolute path
-    Launch { rom_path: String },
+    Launch { game_id: i64 },
     Library,
 }
 
@@ -30,7 +30,7 @@ async fn main() {
     let request = match cli.command {
         Command::Ping => Request::Ping,
         Command::State => Request::GetState,
-        Command::Launch { rom_path } => Request::LaunchGame { rom_path },
+        Command::Launch { game_id } => Request::LaunchGame { game_id },
         Command::Library => Request::GetLibrary,
     };
 
@@ -85,9 +85,17 @@ fn print_response(response: Response) {
                 println!("library is empty")
             } else {
                 for entry in entries {
+                    let last_played = match entry.last_played_at {
+                        Some(ts) => format!("last played {ts}"),
+                        None => "never played".to_string(),
+                    };
                     println!(
-                        "[{}] {} ({} bytes)",
-                        entry.system_display_name, entry.file_name, entry.size_bytes
+                        "[{}] ({}) {} — {}s played, {}",
+                        entry.system_display_name,
+                        entry.id,
+                        entry.file_name,
+                        entry.play_time_seconds,
+                        last_played
                     );
                 }
             }

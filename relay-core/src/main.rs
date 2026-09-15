@@ -1,10 +1,14 @@
 use relay_protocol::{DaemonState, Request, Response, RunningGame};
+use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 
+mod db;
 mod emulator;
+mod gamescope;
 mod library;
+mod pcsx2;
 mod retroarch;
 mod startup;
 mod systems;
@@ -13,9 +17,11 @@ use emulator::EmulatorBackend;
 
 const SOCKET_PATH: &str = "/tmp/relay.sock";
 
-/// Shared, mutable "what's running right now" state, accessible from
-/// every client-handling task.
-type SharedState = Arc<Mutex<Option<RunningGame>>>;
+#[derive(Clone)]
+struct AppState {
+    running_game: Arc<Mutex<Option<RunningGame>>>,
+    db: Arc<Mutex<Connection>>,
+}
 
 #[tokio::main]
 async fn main() {
@@ -29,7 +35,10 @@ async fn main() {
 
     println!("relay-core listening on {SOCKET_PATH}");
 
-    let state: SharedState = Arc::new(Mutex::new(None));
+    let state = AppState {
+        running_game: Arc::new(Mutex::new(None)),
+        db: Arc::new(Mutex::new(db::open())),
+    };
 
     loop {
         let (stream, _addr) = listener
@@ -45,7 +54,7 @@ async fn main() {
     }
 }
 
-async fn handle_client(stream: tokio::net::UnixStream, state: SharedState) {
+async fn handle_client(stream: tokio::net::UnixStream, state: AppState) {
     let (read_half, mut write_half) = stream.into_split();
     let mut reader = BufReader::new(read_half);
     let mut line = String::new();
@@ -72,11 +81,18 @@ async fn handle_client(stream: tokio::net::UnixStream, state: SharedState) {
         let response = match request {
             Request::Ping => Response::Pong,
             Request::GetState => {
-                let running_game = state.lock().unwrap().clone();
+                let running_game = state.running_game.lock().unwrap().clone();
                 Response::State(DaemonState { running_game })
             }
-            Request::LaunchGame { rom_path } => launch_game(rom_path, state.clone()),
-            Request::GetLibrary => Response::Library(library::scan_library()),
+            Request::LaunchGame { game_id } => launch_game(game_id, state.clone()),
+            Request::GetLibrary => {
+                let scanned = library::scan_library();
+                let conn = state.db.lock().unwrap();
+                db::upsert_scanned(&conn, &scanned);
+                let entries = db::get_all(&conn);
+                drop(conn);
+                Response::Library(entries)
+            }
         };
 
         let mut json = serde_json::to_string(&response).unwrap();
@@ -85,10 +101,27 @@ async fn handle_client(stream: tokio::net::UnixStream, state: SharedState) {
     }
 }
 
-fn launch_game(rom_path: String, state: SharedState) -> Response {
-    let backend = retroarch::RetroArchBackend;
+fn launch_game(game_id: i64, state: AppState) -> Response {
+    let conn = state.db.lock().unwrap();
+    let entry = db::get_by_id(&conn, game_id);
+    drop(conn);
 
-    let child = match backend.launch(&rom_path) {
+    let Some(entry) = entry else {
+        return Response::Error {
+            message: format!("no library entry with id {game_id}"),
+        };
+    };
+
+    let system =
+        systems::find(&entry.system).expect("system for a library entry must exist in ALL_SYSTEMS");
+
+    let backend: Box<dyn EmulatorBackend> = if system.retroarch_core.is_none() {
+        Box::new(pcsx2::Pcsx2Backend)
+    } else {
+        Box::new(retroarch::RetroArchBackend)
+    };
+
+    let child = match backend.launch(&entry.rom_path) {
         Ok(child) => child,
         Err(e) => {
             eprintln!("launch failed: {e}");
@@ -98,9 +131,9 @@ fn launch_game(rom_path: String, state: SharedState) -> Response {
 
     let pid = child.id();
 
-    *state.lock().unwrap() = Some(RunningGame {
+    *state.running_game.lock().unwrap() = Some(RunningGame {
         pid,
-        rom_path: rom_path.clone(),
+        rom_path: entry.rom_path.clone(),
     });
 
     // Watch for the process exiting, off the main async runtime, so this
@@ -110,7 +143,7 @@ fn launch_game(rom_path: String, state: SharedState) -> Response {
         let mut child = child;
         let exit_status = child.wait();
         println!("game exited: {exit_status:?}");
-        *watch_state.lock().unwrap() = None;
+        *watch_state.running_game.lock().unwrap() = None;
     });
 
     Response::GameLaunched { pid }

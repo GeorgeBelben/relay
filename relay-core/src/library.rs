@@ -1,11 +1,20 @@
 use crate::startup::roms_dir;
 use crate::systems::ALL_SYSTEMS;
-use relay_protocol::LibraryEntry;
+
+/// A ROM file found on disk during a scan — not yet reconciled with the
+/// database, so it has no id/play-time/last-played data.
+pub struct ScannedRom {
+    pub system: String,
+    pub system_display_name: String,
+    pub file_name: String,
+    pub rom_path: String,
+    pub size_bytes: u64,
+}
 
 /// Scans every known system's ROM folder and returns what it finds.
 /// Does no caching or persistence yet — this re-reads the filesystem
 /// every time it's called.
-pub fn scan_library() -> Vec<LibraryEntry> {
+pub fn scan_library() -> Vec<ScannedRom> {
     let mut entries = Vec::new();
 
     for system in ALL_SYSTEMS {
@@ -46,7 +55,7 @@ pub fn scan_library() -> Vec<LibraryEntry> {
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();
 
-            entries.push(LibraryEntry {
+            entries.push(ScannedRom {
                 system: system.id.to_string(),
                 system_display_name: system.display_name.to_string(),
                 file_name,

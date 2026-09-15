@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Request {
     Ping,
-    LaunchGame { rom_path: String },
+    LaunchGame { game_id: i64 },
     GetState,
     GetLibrary,
 }
@@ -44,9 +44,12 @@ pub struct RunningGame {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryEntry {
+    pub id: i64,
     pub system: String,
     pub system_display_name: String,
     pub file_name: String,
     pub rom_path: String,
     pub size_bytes: u64,
+    pub play_time_seconds: u64,
+    pub last_played_at: Option<i64>,
 }

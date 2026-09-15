@@ -1,14 +1,18 @@
 use crate::systems::ALL_SYSTEMS;
 use std::path::PathBuf;
 
+pub fn data_dir() -> PathBuf {
+    dirs::data_dir()
+        .expect("could not determine a data directory for this user")
+        .join("relay")
+}
+
 /// Ensures the directories relay-core needs actually exist, creating them
 /// if this is a fresh install. Called once at startup, before the daemon
 /// starts accepting connections — if we can't get this right, there's no
 /// point continuing.
 pub fn ensure_directories() {
-    let data_dir = dirs::data_dir()
-        .expect("could not determine a data directory for this user")
-        .join("relay");
+    let data_dir = data_dir();
 
     create_dir(&data_dir);
 
