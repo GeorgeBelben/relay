@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use relay_protocol::{Request, Response};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -97,17 +98,22 @@ async fn send(request: Request) -> Result<Response, String> {
 
 fn print_response(response: Response) {
     match response {
-        Response::Pong => println!("Pong"),
+        Response::Pong => println!("{}", "Pong".green()),
         Response::Error { message } => {
-            eprintln!("daemon error: {message}");
+            eprintln!("{} {message}", "daemon error:".red().bold());
             std::process::exit(1);
         }
-        Response::GameLaunched { pid } => println!("launched, pid {pid}"),
+        Response::GameLaunched { pid } => println!("{} pid {pid}", "launched,".green()),
         Response::GameExited { exit_code } => println!("game exited, code {exit_code:?}"),
-        Response::GameStopped => println!("game stopped"),
+        Response::GameStopped => println!("{}", "game stopped".green()),
         Response::State(state) => match state.running_game {
-            Some(game) => println!("running: {} (pid {})", game.rom_path, game.pid),
-            None => println!("nothing running"),
+            Some(game) => println!(
+                "{} {} (pid {})",
+                "running:".green(),
+                game.rom_path,
+                game.pid
+            ),
+            None => println!("{}", "nothing running".dimmed()),
         },
         Response::Library(entries) => {
             if entries.is_empty() {

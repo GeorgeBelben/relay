@@ -1,3 +1,4 @@
+use log::{debug, error, info, warn};
 use relay_protocol::{DaemonState, Request, Response, RunningGame};
 use rusqlite::Connection;
 use std::process::Command;
@@ -27,6 +28,8 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
     startup::ensure_directories();
 
     // Remove any leftover socket file from the previous run - Unix sockets
@@ -35,7 +38,7 @@ async fn main() {
 
     let listener = UnixListener::bind(SOCKET_PATH).expect("failed to bind socket");
 
-    println!("relay-core listening on {SOCKET_PATH}");
+    info!("relay-core listening on {SOCKET_PATH}");
 
     let state = AppState {
         running_game: Arc::new(Mutex::new(None)),
@@ -73,12 +76,12 @@ async fn handle_client(stream: tokio::net::UnixStream, state: AppState) {
         let request: Request = match serde_json::from_str(line.trim()) {
             Ok(req) => req,
             Err(e) => {
-                println!("bad request: {e}");
+                warn!("bad request: {e}");
                 continue;
             }
         };
 
-        println!("recieved: {request:?}");
+        debug!("recieved: {request:?}");
 
         let response = match request {
             Request::Ping => Response::Pong,
@@ -146,7 +149,7 @@ fn launch_game(game_id: i64, state: AppState) -> Response {
     let child = match backend.launch(&entry.rom_path, &settings) {
         Ok(child) => child,
         Err(e) => {
-            eprintln!("launch failed: {e}");
+            error!("launch failed: {e}");
             return Response::Error { message: e };
         }
     };
@@ -164,7 +167,7 @@ fn launch_game(game_id: i64, state: AppState) -> Response {
     tokio::task::spawn_blocking(move || {
         let mut child = child;
         let exit_status = child.wait();
-        println!("game exited: {exit_status:?}");
+        info!("game exited: {exit_status:?}");
         *watch_state.running_game.lock().unwrap() = None;
 
         let played_seconds = launched_at.elapsed().as_secs();

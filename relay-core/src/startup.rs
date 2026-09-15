@@ -1,4 +1,5 @@
 use crate::systems::ALL_SYSTEMS;
+use log::info;
 use std::path::PathBuf;
 
 pub fn data_dir() -> PathBuf {
@@ -27,8 +28,8 @@ pub fn ensure_directories() {
     create_dir(&shaders_dir());
     create_dir(&screenshots_dir());
 
-    println!("data dir ready: {}", data_dir.display());
-    println!("library ready: {}", library.display());
+    info!("data dir ready: {}", data_dir.display());
+    info!("library ready: {}", library.display());
 }
 
 fn create_dir(path: &PathBuf) {

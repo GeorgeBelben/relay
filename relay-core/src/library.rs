@@ -1,5 +1,6 @@
 use crate::startup::roms_dir;
 use crate::systems::ALL_SYSTEMS;
+use log::warn;
 
 /// A ROM file found on disk during a scan — not yet reconciled with the
 /// database, so it has no id/play-time/last-played data.
@@ -23,7 +24,7 @@ pub fn scan_library() -> Vec<ScannedRom> {
         let read_dir = match std::fs::read_dir(&system_dir) {
             Ok(rd) => rd,
             Err(e) => {
-                eprintln!("couldn't read {}: {e}", system_dir.display());
+                warn!("couldn't read {}: {e}", system_dir.display());
                 continue;
             }
         };
@@ -32,7 +33,7 @@ pub fn scan_library() -> Vec<ScannedRom> {
             let entry = match entry {
                 Ok(e) => e,
                 Err(e) => {
-                    eprintln!("bad directory entry in {}: {e}", system.id);
+                    warn!("bad directory entry in {}: {e}", system.id);
                     continue;
                 }
             };
@@ -45,7 +46,7 @@ pub fn scan_library() -> Vec<ScannedRom> {
             let metadata = match entry.metadata() {
                 Ok(m) => m,
                 Err(e) => {
-                    eprintln!("couldn't read metadata for {}: {e}", path.display());
+                    warn!("couldn't read metadata for {}: {e}", path.display());
                     continue;
                 }
             };
