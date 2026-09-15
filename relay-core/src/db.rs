@@ -5,7 +5,7 @@ use crate::library::ScannedRom;
 
 // Opens (creating if needed) the sqlite database
 pub fn open() -> Connection {
-    let path = crate::startup::data_dir().join("relay.db");
+    let path = crate::startup::data_dir().join("relay-core.db");
     let conn = Connection::open(&path).expect("failed to open database");
 
     conn.execute(
