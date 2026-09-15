@@ -1,7 +1,7 @@
 use crate::emulator::EmulatorBackend;
 use crate::gamescope::gamescope_x11_display;
 use crate::settings::Settings;
-use crate::startup::{bios_dir, saves_dir, states_dir};
+use crate::startup::{bios_dir, saves_dir, screenshots_dir, states_dir};
 use std::fs;
 use std::path::PathBuf;
 use std::process::{Child, Command};
@@ -57,6 +57,7 @@ pub fn ensure_pcsx2_config(settings: &Settings) -> Result<(), String> {
     let bios_dir = bios_dir().to_string_lossy().to_string();
     let saves_dir = saves_dir().to_string_lossy().to_string();
     let states_dir = states_dir().to_string_lossy().to_string();
+    let screenshots_dir = screenshots_dir().to_string_lossy().to_string();
 
     let patched: Vec<String> = contents
         .lines()
@@ -73,6 +74,8 @@ pub fn ensure_pcsx2_config(settings: &Settings) -> Result<(), String> {
                 format!("MemoryCards = {saves_dir}")
             } else if line.starts_with("Savestates = ") {
                 format!("Savestates = {states_dir}")
+            } else if line.starts_with("Snapshots = ") {
+                format!("Snapshots = {screenshots_dir}")
             } else {
                 line.to_string()
             }
