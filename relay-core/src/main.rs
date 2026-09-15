@@ -1,5 +1,6 @@
 use relay_protocol::{DaemonState, Request, Response, RunningGame};
 use rusqlite::Connection;
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
@@ -85,6 +86,7 @@ async fn handle_client(stream: tokio::net::UnixStream, state: AppState) {
                 Response::State(DaemonState { running_game })
             }
             Request::LaunchGame { game_id } => launch_game(game_id, state.clone()),
+            Request::StopGame => stop_game(state.clone()),
             Request::GetLibrary => {
                 let scanned = library::scan_library();
                 let conn = state.db.lock().unwrap();
@@ -147,4 +149,24 @@ fn launch_game(game_id: i64, state: AppState) -> Response {
     });
 
     Response::GameLaunched { pid }
+}
+
+fn stop_game(state: AppState) -> Response {
+    let pid = state.running_game.lock().unwrap().as_ref().map(|g| g.pid);
+
+    let Some(pid) = pid else {
+        return Response::Error {
+            message: "no game currently running".to_string(),
+        };
+    };
+
+    match Command::new("kill").arg(pid.to_string()).status() {
+        Ok(status) if status.success() => Response::GameStopped,
+        Ok(status) => Response::Error {
+            message: format!("kill exited with {status}"),
+        },
+        Err(e) => Response::Error {
+            message: format!("failed to run kill: {e}"),
+        },
+    }
 }

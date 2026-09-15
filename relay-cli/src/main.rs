@@ -20,6 +20,7 @@ enum Command {
     State,
     // Launch a rom by an absolute path
     Launch { game_id: i64 },
+    Stop,
     Library,
 }
 
@@ -31,6 +32,7 @@ async fn main() {
         Command::Ping => Request::Ping,
         Command::State => Request::GetState,
         Command::Launch { game_id } => Request::LaunchGame { game_id },
+        Command::Stop => Request::StopGame,
         Command::Library => Request::GetLibrary,
     };
 
@@ -76,6 +78,7 @@ fn print_response(response: Response) {
         }
         Response::GameLaunched { pid } => println!("launched, pid {pid}"),
         Response::GameExited { exit_code } => println!("game exited, code {exit_code:?}"),
+        Response::GameStopped => println!("game stopped"),
         Response::State(state) => match state.running_game {
             Some(game) => println!("running: {} (pid {})", game.rom_path, game.pid),
             None => println!("nothing running"),

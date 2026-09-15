@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum Request {
     Ping,
     LaunchGame { game_id: i64 },
+    StopGame,
     GetState,
     GetLibrary,
 }
@@ -25,6 +26,8 @@ pub enum Response {
     GameExited {
         exit_code: Option<i32>,
     },
+    /// A game was stopped by request (as opposed to exiting on its own).
+    GameStopped,
     /// Reply to `Request::GetState`.
     State(DaemonState),
     Library(Vec<LibraryEntry>),
