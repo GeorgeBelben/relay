@@ -20,9 +20,8 @@ pub fn gamescope_env() -> Vec<(String, String)> {
 
     let display = entries.filter_map(|entry| entry.ok()).find_map(|entry| {
         let name = entry.file_name().into_string().ok()?;
-        let is_gamescope_socket = name.starts_with("gamescope-")
-            && !name.ends_with("-ei")
-            && !name.ends_with(".lock");
+        let is_gamescope_socket =
+            name.starts_with("gamescope-") && !name.ends_with("-ei") && !name.ends_with(".lock");
         if !is_gamescope_socket {
             return None;
         }
@@ -37,4 +36,21 @@ pub fn gamescope_env() -> Vec<(String, String)> {
         ("WAYLAND_DISPLAY".to_string(), display),
         ("XDG_RUNTIME_DIR".to_string(), runtime_dir),
     ]
+}
+
+pub fn gamescope_x11_display() -> Option<String> {
+    let entries = std::fs::read_dir("/tmp/.X11-unix").ok()?;
+
+    entries.filter_map(|entry| entry.ok()).find_map(|entry| {
+        let name = entry.file_name().into_string().ok()?;
+        let number = name.strip_prefix('X')?;
+        if !number.chars().all(|c| c.is_ascii_digit()) {
+            return None;
+        }
+        entry
+            .file_type()
+            .ok()?
+            .is_socket()
+            .then(|| format!(":{number}"))
+    })
 }

@@ -1,5 +1,5 @@
 use crate::emulator::EmulatorBackend;
-use crate::gamescope::gamescope_env;
+use crate::gamescope::gamescope_x11_display;
 use crate::startup::bios_dir;
 use std::fs;
 use std::path::PathBuf;
@@ -14,11 +14,16 @@ impl EmulatorBackend for Pcsx2Backend {
     fn launch(&self, rom_path: &str) -> Result<Child, String> {
         ensure_pcsx2_config("SCPH-70004.BIN");
 
-        Command::new(PCSX2_BIN)
-            .arg("-fullscreen")
-            .arg("-nogui")
-            .arg(rom_path)
-            .envs(gamescope_env())
+        let mut command = Command::new(PCSX2_BIN);
+        command.arg("-fullscreen").arg("-nogui").arg(rom_path);
+
+        if let Some(display) = gamescope_x11_display() {
+            command
+                .env("DISPLAY", display)
+                .env("QT_QPA_PLATFORM", "xcb");
+        }
+
+        command
             .spawn()
             .map_err(|e| format!("failed to launch Pcsx2: {e}"))
     }
