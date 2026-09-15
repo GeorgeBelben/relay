@@ -23,8 +23,8 @@ pub fn ensure_directories() {
     }
 
     create_dir(&bios_dir());
-    create_dir(&saves_dir());
-    create_dir(&states_dir());
+    create_dir(&saves_dir(None));
+    create_dir(&states_dir(None));
     create_dir(&shaders_dir());
     create_dir(&screenshots_dir());
 
@@ -42,6 +42,15 @@ pub fn library_root() -> PathBuf {
     PathBuf::from(home).join("Relay")
 }
 
+fn profile_root(profile_id: i64) -> PathBuf {
+    library_root().join("profiles").join(profile_id.to_string())
+}
+
+pub fn ensure_profile_directories(profile_id: i64) {
+    create_dir(&saves_dir(Some(profile_id)));
+    create_dir(&states_dir(Some(profile_id)));
+}
+
 pub fn roms_dir() -> PathBuf {
     library_root().join("roms")
 }
@@ -50,12 +59,18 @@ pub fn bios_dir() -> PathBuf {
     library_root().join("bios")
 }
 
-pub fn saves_dir() -> PathBuf {
-    library_root().join("saves")
+pub fn saves_dir(profile_id: Option<i64>) -> PathBuf {
+    match profile_id {
+        Some(id) => profile_root(id).join("saves"),
+        None => library_root().join("saves"),
+    }
 }
 
-pub fn states_dir() -> PathBuf {
-    library_root().join("states")
+pub fn states_dir(profile_id: Option<i64>) -> PathBuf {
+    match profile_id {
+        Some(id) => profile_root(id).join("states"),
+        None => library_root().join("states"),
+    }
 }
 
 pub fn shaders_dir() -> PathBuf {

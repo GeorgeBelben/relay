@@ -29,6 +29,14 @@ enum Command {
         #[command(subcommand)]
         action: SettingsAction,
     },
+    Profile {
+        #[command(subcommand)]
+        action: ProfileAction,
+    },
+    Ra {
+        #[command(subcommand)]
+        action: RaAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -43,6 +51,22 @@ enum SettingsAction {
         key: String,
         value: String,
     },
+}
+
+#[derive(Subcommand)]
+enum ProfileAction {
+    Create { name: String },
+    List,
+    Use { profile_id: i64 },
+}
+
+#[derive(Subcommand)]
+enum RaAction {
+    Link {
+        username: String,
+        web_api_key: String,
+    },
+    Stats,
 }
 
 #[tokio::main]
@@ -60,6 +84,21 @@ async fn main() {
             SettingsAction::Set { system, key, value } => {
                 Request::SetSetting { system, key, value }
             }
+        },
+        Command::Profile { action } => match action {
+            ProfileAction::Create { name } => Request::CreateProfile { name },
+            ProfileAction::List => Request::ListProfiles,
+            ProfileAction::Use { profile_id } => Request::SetActiveProfile { profile_id },
+        },
+        Command::Ra { action } => match action {
+            RaAction::Link {
+                username,
+                web_api_key,
+            } => Request::LinkRetroAchievements {
+                username,
+                web_api_key,
+            },
+            RaAction::Stats => Request::GetRaStats,
         },
     };
 
@@ -145,5 +184,45 @@ fn print_response(response: Response) {
             }
         }
         Response::SettingSet => println!("setting saved"),
+        Response::Profile(profile) => println!(
+            "{} {} (id {}){}",
+            "profile:".green(),
+            profile.name,
+            profile.id,
+            if profile.ra_linked {
+                " [RA linked]"
+            } else {
+                ""
+            }
+        ),
+        Response::Profiles(profiles) => {
+            if profiles.is_empty() {
+                println!("no profiles yet")
+            } else {
+                for profile in profiles {
+                    println!(
+                        "({}) {}{}",
+                        profile.id,
+                        profile.name,
+                        if profile.ra_linked {
+                            " [RA linked]"
+                        } else {
+                            ""
+                        }
+                    );
+                }
+            }
+        }
+        Response::ActiveProfile(profile) => match profile {
+            Some(profile) => println!("{} {} (id {})", "active:".green(), profile.name, profile.id),
+            None => println!("{}", "no active profile".dimmed()),
+        },
+        Response::RaStats {
+            points,
+            softcore_points,
+        } => println!(
+            "{} {points} hardcore, {softcore_points} softcore",
+            "points:".green()
+        ),
     }
 }

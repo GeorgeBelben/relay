@@ -1,4 +1,5 @@
 use log::{debug, error, info, warn};
+use relay_protocol::ProfileInfo;
 use relay_protocol::{DaemonState, Request, Response, RunningGame};
 use rusqlite::Connection;
 use std::process::Command;
@@ -24,6 +25,14 @@ const SOCKET_PATH: &str = "/tmp/relay.sock";
 struct AppState {
     running_game: Arc<Mutex<Option<RunningGame>>>,
     db: Arc<Mutex<Connection>>,
+    active_profile: Arc<Mutex<Option<i64>>>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct RaPoints {
+    points: i64,
+    softcore_points: i64,
 }
 
 #[tokio::main]
@@ -43,6 +52,7 @@ async fn main() {
     let state = AppState {
         running_game: Arc::new(Mutex::new(None)),
         db: Arc::new(Mutex::new(db::open())),
+        active_profile: Arc::new(Mutex::new(None)),
     };
 
     loop {
@@ -113,6 +123,17 @@ async fn handle_client(stream: tokio::net::UnixStream, state: AppState) {
                 drop(conn);
                 Response::SettingSet
             }
+            Request::CreateProfile { name } => create_profile(name, state.clone()),
+            Request::ListProfiles => list_profiles(state.clone()),
+            Request::SetActiveProfile { profile_id } => {
+                set_active_profile(profile_id, state.clone())
+            }
+            Request::GetActiveProfile => get_active_profile(state.clone()),
+            Request::LinkRetroAchievements {
+                username,
+                web_api_key,
+            } => link_retroachievements(username, web_api_key, state.clone()),
+            Request::GetRaStats => get_ra_stats(state.clone()).await,
         };
 
         let mut json = serde_json::to_string(&response).unwrap();
@@ -131,7 +152,8 @@ fn launch_game(game_id: i64, state: AppState) -> Response {
         };
     };
 
-    let settings = settings::Settings::resolve(&conn, &entry.system);
+    let profile_id = *state.active_profile.lock().unwrap();
+    let settings = settings::Settings::resolve(&conn, &entry.system, profile_id);
 
     drop(conn);
 
@@ -194,6 +216,129 @@ fn stop_game(state: AppState) -> Response {
         },
         Err(e) => Response::Error {
             message: format!("failed to run kill: {e}"),
+        },
+    }
+}
+
+fn to_profile_info(profile: db::Profile) -> ProfileInfo {
+    ProfileInfo {
+        id: profile.id,
+        name: profile.name,
+        avatar_seed: profile.avatar_seed,
+        ra_linked: profile.ra_username.is_some() && profile.ra_web_api_key.is_some(),
+    }
+}
+
+fn create_profile(name: String, state: AppState) -> Response {
+    let conn = state.db.lock().unwrap();
+    let id = db::create_profile(&conn, &name);
+    let profile = db::get_profile(&conn, id).expect("just-created profile must exist");
+    drop(conn);
+    startup::ensure_profile_directories(id);
+    Response::Profile(to_profile_info(profile))
+}
+
+fn list_profiles(state: AppState) -> Response {
+    let conn = state.db.lock().unwrap();
+    let profiles = db::list_profiles(&conn);
+    drop(conn);
+    Response::Profiles(profiles.into_iter().map(to_profile_info).collect())
+}
+
+fn set_active_profile(profile_id: i64, state: AppState) -> Response {
+    let conn = state.db.lock().unwrap();
+    let profile = db::get_profile(&conn, profile_id);
+    drop(conn);
+
+    let Some(profile) = profile else {
+        return Response::Error {
+            message: format!("no profile with id {profile_id}"),
+        };
+    };
+
+    *state.active_profile.lock().unwrap() = Some(profile_id);
+    Response::ActiveProfile(Some(to_profile_info(profile)))
+}
+
+fn get_active_profile(state: AppState) -> Response {
+    let profile_id = *state.active_profile.lock().unwrap();
+
+    let Some(profile_id) = profile_id else {
+        return Response::ActiveProfile(None);
+    };
+
+    let conn = state.db.lock().unwrap();
+    let profile = db::get_profile(&conn, profile_id);
+    drop(conn);
+
+    Response::ActiveProfile(profile.map(to_profile_info))
+}
+
+fn link_retroachievements(username: String, web_api_key: String, state: AppState) -> Response {
+    let profile_id = *state.active_profile.lock().unwrap();
+
+    let Some(profile_id) = profile_id else {
+        return Response::Error {
+            message: "no active profile - use SetActiveProfile first".to_string(),
+        };
+    };
+
+    let conn = state.db.lock().unwrap();
+    db::link_retroachievements(&conn, profile_id, &username, &web_api_key);
+    let profile = db::get_profile(&conn, profile_id).expect("active profile must exist");
+    drop(conn);
+
+    Response::Profile(to_profile_info(profile))
+}
+
+async fn get_ra_stats(state: AppState) -> Response {
+    let profile_id = *state.active_profile.lock().unwrap();
+
+    let Some(profile_id) = profile_id else {
+        return Response::Error {
+            message: "no active profile - use SetActiveProfile first".to_string(),
+        };
+    };
+
+    let profile = {
+        let conn = state.db.lock().unwrap();
+        db::get_profile(&conn, profile_id)
+    };
+
+    let Some(profile) = profile else {
+        return Response::Error {
+            message: format!("no profile with id {profile_id}"),
+        };
+    };
+
+    let (Some(username), Some(web_api_key)) = (profile.ra_username, profile.ra_web_api_key) else {
+        return Response::Error {
+            message: "active profile has no RetroAchievements account linked".to_string(),
+        };
+    };
+
+    let response = reqwest::Client::new()
+        .get("https://retroachievements.org/API/API_GetUserPoints.php")
+        .query(&[("u", &username), ("y", &web_api_key)])
+        .send()
+        .await;
+
+    let response = match response {
+        Ok(response) => response,
+        Err(e) => {
+            return Response::Error {
+                message: format!("failed to reach RetroAchievements: {e}"),
+            };
+        }
+    };
+
+    match response.json::<RaPoints>().await {
+        Ok(stats) => Response::RaStats {
+            points: stats.points,
+            softcore_points: stats.softcore_points,
+        },
+        Err(e) => Response::Error {
+            message: format!("bad response from RetroAchievements: {e}"),
         },
     }
 }

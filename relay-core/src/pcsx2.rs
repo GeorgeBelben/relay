@@ -55,9 +55,16 @@ pub fn ensure_pcsx2_config(settings: &Settings) -> Result<(), String> {
         .unwrap_or_else(|e| panic!("failed to read {}: {e}", config_path.display()));
 
     let bios_dir = bios_dir().to_string_lossy().to_string();
-    let saves_dir = saves_dir().to_string_lossy().to_string();
-    let states_dir = states_dir().to_string_lossy().to_string();
+    let saves_dir = saves_dir(settings.profile_id())
+        .to_string_lossy()
+        .to_string();
+    let states_dir = states_dir(settings.profile_id())
+        .to_string_lossy()
+        .to_string();
     let screenshots_dir = screenshots_dir().to_string_lossy().to_string();
+
+    let fxaa = settings.get_bool("pcsx2.fxaa").unwrap_or(false);
+    let tv_shader = settings.get_int("pcsx2.tv_shader").unwrap_or(0);
 
     let patched: Vec<String> = contents
         .lines()
@@ -76,6 +83,10 @@ pub fn ensure_pcsx2_config(settings: &Settings) -> Result<(), String> {
                 format!("Savestates = {states_dir}")
             } else if line.starts_with("Snapshots = ") {
                 format!("Snapshots = {screenshots_dir}")
+            } else if line.starts_with("fxaa = ") {
+                format!("fxaa = {fxaa}")
+            } else if line.starts_with("TVShader = ") {
+                format!("TVShader = {tv_shader}")
             } else {
                 line.to_string()
             }

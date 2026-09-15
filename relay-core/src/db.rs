@@ -3,6 +3,14 @@ use rusqlite::{Connection, params};
 
 use crate::library::ScannedRom;
 
+pub struct Profile {
+    pub id: i64,
+    pub name: String,
+    pub avatar_seed: String,
+    pub ra_username: Option<String>,
+    pub ra_web_api_key: Option<String>,
+}
+
 // Opens (creating if needed) the sqlite database
 pub fn open() -> Connection {
     let path = crate::startup::data_dir().join("relay-core.db");
@@ -33,6 +41,19 @@ pub fn open() -> Connection {
         [],
     )
     .expect("failed to create settings table");
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS profiles (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        avatar_seed TEXT NOT NULL,
+        ra_username TEXT,
+        ra_web_api_key TEXT,
+        created_at INTEGER NOT NULL
+    )",
+        [],
+    )
+    .expect("failed to create profiles table");
 
     conn
 }
@@ -154,4 +175,78 @@ pub fn record_play_session(conn: &Connection, game_id: i64, played_seconds: u64)
         params![played_seconds as i64, now, game_id],
     )
     .expect("failed to record play session");
+}
+
+/// Creates a profile with a freshly-generated avatar seed, returning its id.
+pub fn create_profile(conn: &Connection, name: &str) -> i64 {
+    let avatar_seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos()
+        .to_string();
+
+    let created_at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    conn.execute(
+        "INSERT INTO profiles (name, avatar_seed, created_at) VALUES (?1, ?2, ?3)",
+        params![name, avatar_seed, created_at],
+    )
+    .expect("failed to create profile");
+
+    conn.last_insert_rowid()
+}
+
+pub fn list_profiles(conn: &Connection) -> Vec<Profile> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, avatar_seed, ra_username, ra_web_api_key FROM profiles ORDER BY id",
+        )
+        .expect("failed to prepare query");
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(Profile {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                avatar_seed: row.get(2)?,
+                ra_username: row.get(3)?,
+                ra_web_api_key: row.get(4)?,
+            })
+        })
+        .expect("failed to run query");
+
+    rows.filter_map(|r| r.ok()).collect()
+}
+
+pub fn get_profile(conn: &Connection, id: i64) -> Option<Profile> {
+    conn.query_row(
+        "SELECT id, name, avatar_seed, ra_username, ra_web_api_key FROM profiles WHERE id = ?1",
+        params![id],
+        |row| {
+            Ok(Profile {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                avatar_seed: row.get(2)?,
+                ra_username: row.get(3)?,
+                ra_web_api_key: row.get(4)?,
+            })
+        },
+    )
+    .ok()
+}
+
+pub fn link_retroachievements(
+    conn: &Connection,
+    profile_id: i64,
+    username: &str,
+    web_api_key: &str,
+) {
+    conn.execute(
+        "UPDATE profiles SET ra_username = ?1, ra_web_api_key = ?2 WHERE id = ?3",
+        params![username, web_api_key, profile_id],
+    )
+    .expect("failed to link retroachievements");
 }

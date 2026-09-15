@@ -18,6 +18,19 @@ pub enum Request {
         key: String,
         value: String,
     },
+    CreateProfile {
+        name: String,
+    },
+    ListProfiles,
+    SetActiveProfile {
+        profile_id: i64,
+    },
+    GetActiveProfile,
+    LinkRetroAchievements {
+        username: String,
+        web_api_key: String,
+    },
+    GetRaStats,
 }
 
 /// Sent from the daemon back to a client.
@@ -43,6 +56,13 @@ pub enum Response {
     Library(Vec<LibraryEntry>),
     Settings(Vec<(String, String)>),
     SettingSet,
+    Profile(ProfileInfo),
+    Profiles(Vec<ProfileInfo>),
+    ActiveProfile(Option<ProfileInfo>),
+    RaStats {
+        points: i64,
+        softcore_points: i64,
+    },
 }
 
 /// A snapshot of what the daemon currently knows.
@@ -67,4 +87,12 @@ pub struct LibraryEntry {
     pub size_bytes: u64,
     pub play_time_seconds: u64,
     pub last_played_at: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileInfo {
+    pub id: i64,
+    pub name: String,
+    pub avatar_seed: String,
+    pub ra_linked: bool,
 }
