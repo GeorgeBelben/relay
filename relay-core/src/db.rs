@@ -137,3 +137,21 @@ pub fn set_setting(conn: &Connection, scope: &str, key: &str, value: &str) {
     )
     .expect("failed to set setting");
 }
+
+/// Adds to a game's accumulated play time and updates when it was last
+/// played. Called once, when a launched game's process actually exits.
+pub fn record_play_session(conn: &Connection, game_id: i64, played_seconds: u64) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    conn.execute(
+        "UPDATE library_entries
+        SET play_time_seconds = play_time_seconds + ?1,
+            last_played_at = ?2
+        WHERE id = ?3",
+        params![played_seconds as i64, now, game_id],
+    )
+    .expect("failed to record play session");
+}

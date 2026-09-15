@@ -141,6 +141,8 @@ fn launch_game(game_id: i64, state: AppState) -> Response {
         Box::new(retroarch::RetroArchBackend)
     };
 
+    let launched_at = std::time::Instant::now();
+
     let child = match backend.launch(&entry.rom_path, &settings) {
         Ok(child) => child,
         Err(e) => {
@@ -164,6 +166,10 @@ fn launch_game(game_id: i64, state: AppState) -> Response {
         let exit_status = child.wait();
         println!("game exited: {exit_status:?}");
         *watch_state.running_game.lock().unwrap() = None;
+
+        let played_seconds = launched_at.elapsed().as_secs();
+        let conn = watch_state.db.lock().unwrap();
+        db::record_play_session(&conn, game_id, played_seconds);
     });
 
     Response::GameLaunched { pid }
