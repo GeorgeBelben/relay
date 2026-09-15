@@ -4,10 +4,20 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Request {
     Ping,
-    LaunchGame { game_id: i64 },
+    LaunchGame {
+        game_id: i64,
+    },
     StopGame,
     GetState,
     GetLibrary,
+    GetSettings {
+        system: Option<String>,
+    },
+    SetSetting {
+        system: Option<String>,
+        key: String,
+        value: String,
+    },
 }
 
 /// Sent from the daemon back to a client.
@@ -31,6 +41,8 @@ pub enum Response {
     /// Reply to `Request::GetState`.
     State(DaemonState),
     Library(Vec<LibraryEntry>),
+    Settings(Vec<(String, String)>),
+    SettingSet,
 }
 
 /// A snapshot of what the daemon currently knows.

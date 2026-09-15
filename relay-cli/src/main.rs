@@ -19,9 +19,29 @@ enum Command {
     // Ask the daemon what's currently running
     State,
     // Launch a rom by an absolute path
-    Launch { game_id: i64 },
+    Launch {
+        game_id: i64,
+    },
     Stop,
     Library,
+    Settings {
+        #[command(subcommand)]
+        action: SettingsAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum SettingsAction {
+    List {
+        #[arg(long)]
+        system: Option<String>,
+    },
+    Set {
+        #[arg(long)]
+        system: Option<String>,
+        key: String,
+        value: String,
+    },
 }
 
 #[tokio::main]
@@ -34,6 +54,12 @@ async fn main() {
         Command::Launch { game_id } => Request::LaunchGame { game_id },
         Command::Stop => Request::StopGame,
         Command::Library => Request::GetLibrary,
+        Command::Settings { action } => match action {
+            SettingsAction::List { system } => Request::GetSettings { system },
+            SettingsAction::Set { system, key, value } => {
+                Request::SetSetting { system, key, value }
+            }
+        },
     };
 
     match send(request).await {
@@ -103,5 +129,15 @@ fn print_response(response: Response) {
                 }
             }
         }
+        Response::Settings(entries) => {
+            if entries.is_empty() {
+                println!("no settings set")
+            } else {
+                for (key, value) in entries {
+                    println!("{key} = {value}");
+                }
+            }
+        }
+        Response::SettingSet => println!("setting saved"),
     }
 }

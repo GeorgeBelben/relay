@@ -11,6 +11,7 @@ mod gamescope;
 mod library;
 mod pcsx2;
 mod retroarch;
+mod settings;
 mod startup;
 mod systems;
 
@@ -95,6 +96,20 @@ async fn handle_client(stream: tokio::net::UnixStream, state: AppState) {
                 drop(conn);
                 Response::Library(entries)
             }
+            Request::GetSettings { system } => {
+                let conn = state.db.lock().unwrap();
+                let scope = settings::scope_for(system.as_deref());
+                let entries = db::get_settings_for_scope(&conn, &scope);
+                drop(conn);
+                Response::Settings(entries)
+            }
+            Request::SetSetting { system, key, value } => {
+                let conn = state.db.lock().unwrap();
+                let scope = settings::scope_for(system.as_deref());
+                db::set_setting(&conn, &scope, &key, &value);
+                drop(conn);
+                Response::SettingSet
+            }
         };
 
         let mut json = serde_json::to_string(&response).unwrap();
@@ -106,13 +121,16 @@ async fn handle_client(stream: tokio::net::UnixStream, state: AppState) {
 fn launch_game(game_id: i64, state: AppState) -> Response {
     let conn = state.db.lock().unwrap();
     let entry = db::get_by_id(&conn, game_id);
-    drop(conn);
 
     let Some(entry) = entry else {
         return Response::Error {
             message: format!("no library entry with id {game_id}"),
         };
     };
+
+    let settings = settings::Settings::resolve(&conn, &entry.system);
+
+    drop(conn);
 
     let system =
         systems::find(&entry.system).expect("system for a library entry must exist in ALL_SYSTEMS");
@@ -123,7 +141,7 @@ fn launch_game(game_id: i64, state: AppState) -> Response {
         Box::new(retroarch::RetroArchBackend)
     };
 
-    let child = match backend.launch(&entry.rom_path) {
+    let child = match backend.launch(&entry.rom_path, &settings) {
         Ok(child) => child,
         Err(e) => {
             eprintln!("launch failed: {e}");

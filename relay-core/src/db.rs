@@ -23,6 +23,17 @@ pub fn open() -> Connection {
     )
     .expect("failed to create library_entries table");
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS settings (
+        scope TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        PRIMARY KEY (scope, key)
+    )",
+        [],
+    )
+    .expect("failed to create settings table");
+
     conn
 }
 
@@ -99,4 +110,30 @@ pub fn get_by_id(conn: &Connection, id: i64) -> Option<LibraryEntry> {
         },
     )
     .ok()
+}
+
+/// All key/value pairs stored for one scope ("global" or "system:<id>").
+/// Doesn't merge/resolve anything - that's settings.rs's job, this is
+/// just the raw read.
+pub fn get_settings_for_scope(conn: &Connection, scope: &str) -> Vec<(String, String)> {
+    let mut stmt = conn
+        .prepare("SELECT key, value FROM settings WHERE scope = ?1")
+        .expect("failed to prepare query");
+
+    let rows = stmt
+        .query_map(params![scope], |row| Ok((row.get(0)?, row.get(1)?)))
+        .expect("failed to run query");
+
+    rows.filter_map(|r| r.ok()).collect()
+}
+
+/// Sets a single key, overwriting any existing value for that scope+key.
+pub fn set_setting(conn: &Connection, scope: &str, key: &str, value: &str) {
+    conn.execute(
+        "INSERT INTO settings (scope, key, value)
+        VALUES (?1, ?2, ?3)
+        ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value",
+        params![scope, key, value],
+    )
+    .expect("failed to set setting");
 }

@@ -1,5 +1,6 @@
 use crate::emulator::EmulatorBackend;
 use crate::gamescope::gamescope_x11_display;
+use crate::settings::Settings;
 use crate::startup::bios_dir;
 use std::fs;
 use std::path::PathBuf;
@@ -11,8 +12,8 @@ const PCSX2_BIN: &str = "/usr/games/pcsx2-qt";
 pub struct Pcsx2Backend;
 
 impl EmulatorBackend for Pcsx2Backend {
-    fn launch(&self, rom_path: &str) -> Result<Child, String> {
-        ensure_pcsx2_config("SCPH-70004.BIN");
+    fn launch(&self, rom_path: &str, settings: &Settings) -> Result<Child, String> {
+        ensure_pcsx2_config(settings)?;
 
         let mut command = Command::new(PCSX2_BIN);
         command.arg("-fullscreen").arg("-nogui").arg(rom_path);
@@ -41,7 +42,13 @@ fn pcsx2_config_path() -> PathBuf {
 /// Assumes the ini already exists (created by PCSX2's own first run / `-testconfig`)
 /// — a fresh empty file wouldn't have the `[Folders]`/`[Filenames]`/`[UI]` sections
 /// or their other default keys, so there's nothing safe to patch yet.
-pub fn ensure_pcsx2_config(bios_filename: &str) {
+pub fn ensure_pcsx2_config(settings: &Settings) -> Result<(), String> {
+    let bios_filename = settings
+        .get_str("pcsx2.bios_filename")
+        .ok_or("no pcsx2.bios_filename setting configured".to_string())?;
+
+    let upscaler_multiplier = settings.get_int("pcsx2.upscale_multiplier").unwrap_or(1);
+
     let config_path = pcsx2_config_path();
 
     let contents = fs::read_to_string(&config_path)
@@ -58,6 +65,8 @@ pub fn ensure_pcsx2_config(bios_filename: &str) {
                 format!("BIOS = {bios_filename}")
             } else if line.starts_with("SetupWizardIncomplete = ") {
                 "SetupWizardIncomplete = false".to_string()
+            } else if line.starts_with("upscale_multiplier = ") {
+                format!("upscale_multiplier = {upscaler_multiplier}")
             } else {
                 line.to_string()
             }
@@ -66,4 +75,6 @@ pub fn ensure_pcsx2_config(bios_filename: &str) {
 
     fs::write(&config_path, patched.join("\n") + "\n")
         .unwrap_or_else(|e| panic!("failed to write {}: {e}", config_path.display()));
+
+    Ok(())
 }

@@ -1,3 +1,4 @@
+use crate::settings::Settings;
 use std::process::Child;
 
 /// Common interface every emulator integration implements.
@@ -11,5 +12,5 @@ pub trait EmulatorBackend {
     ///
     /// The daemon takes ownership of the returned `Child` — tracking it
     /// and noticing when it exits is the daemon's job, not the backend's.
-    fn launch(&self, rom_path: &str) -> Result<Child, String>;
+    fn launch(&self, rom_path: &str, settings: &Settings) -> Result<Child, String>;
 }
