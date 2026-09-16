@@ -39,6 +39,17 @@ migration actually happens rather than trusting the guesses below.
   like a frozen/stuck UI, not obviously an audio problem. Found on artemis,
   2026-09-16.
 
+## Build-time (not just runtime)
+
+- `libudev-dev` — needed to *compile* `relay-core`, not just run it. The
+  `gilrs` crate (controller detection, REL-169) depends on `libudev-sys`,
+  which shells out to `pkg-config` at build time looking for `libudev.pc`;
+  without the `-dev` package that file doesn't exist and the build fails
+  with `libudev-sys` panicking in its `build.rs`. Added to
+  `.github/workflows/build-relay-core.yml`'s CI runner (`ubuntu-latest`
+  ships `libudev1` but not `-dev`) 2026-09-16. Anyone building relay-core
+  from source on a fresh Ubuntu box needs this too, not just CI.
+
 ## Unconfirmed, worth checking on the next fresh target
 
 - `libxcb-cursor0` (Ubuntu) / `xcb-cursor0` (Arch) — Qt logged a warning
