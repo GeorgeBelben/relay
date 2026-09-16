@@ -25,6 +25,7 @@ enum Command {
     },
     Stop,
     Library,
+    Controllers,
     Settings {
         #[command(subcommand)]
         action: SettingsAction,
@@ -79,6 +80,7 @@ async fn main() {
         Command::Launch { game_id } => Request::LaunchGame { game_id },
         Command::Stop => Request::StopGame,
         Command::Library => Request::GetLibrary,
+        Command::Controllers => Request::GetControllers,
         Command::Settings { action } => match action {
             SettingsAction::List { system } => Request::GetSettings { system },
             SettingsAction::Set { system, key, value } => {
