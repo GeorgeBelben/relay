@@ -224,5 +224,14 @@ fn print_response(response: Response) {
             "{} {points} hardcore, {softcore_points} softcore",
             "points:".green()
         ),
+        Response::Controllers(controllers) => {
+            if controllers.is_empty() {
+                println!("no controllers connected")
+            } else {
+                for c in controllers {
+                    println!("({}) {} [{:?}]", c.index, c.name, c.controller_type);
+                }
+            }
+        }
     }
 }

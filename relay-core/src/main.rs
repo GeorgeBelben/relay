@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 
+mod controllers;
 mod db;
 mod emulator;
 mod gamescope;
@@ -26,6 +27,7 @@ struct AppState {
     running_game: Arc<Mutex<Option<RunningGame>>>,
     db: Arc<Mutex<Connection>>,
     active_profile: Arc<Mutex<Option<i64>>>,
+    controllers: controllers::ControllerRegistry,
 }
 
 #[derive(serde::Deserialize)]
@@ -53,6 +55,7 @@ async fn main() {
         running_game: Arc::new(Mutex::new(None)),
         db: Arc::new(Mutex::new(db::open())),
         active_profile: Arc::new(Mutex::new(None)),
+        controllers: controllers::spawn(),
     };
 
     loop {
@@ -134,6 +137,16 @@ async fn handle_client(stream: tokio::net::UnixStream, state: AppState) {
                 web_api_key,
             } => link_retroachievements(username, web_api_key, state.clone()),
             Request::GetRaStats => get_ra_stats(state.clone()).await,
+            Request::GetControllers => {
+                let controllers = state
+                    .controllers
+                    .lock()
+                    .unwrap()
+                    .values()
+                    .cloned()
+                    .collect();
+                Response::Controllers(controllers)
+            }
         };
 
         let mut json = serde_json::to_string(&response).unwrap();

@@ -12,4 +12,5 @@ dirs = "7"
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 log = "0.4"
 env_logger = "0.11"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.13.5", features = ["json", "query"] }
+gilrs = "0.11.2"

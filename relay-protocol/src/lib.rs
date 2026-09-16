@@ -31,6 +31,7 @@ pub enum Request {
         web_api_key: String,
     },
     GetRaStats,
+    GetControllers,
 }
 
 /// Sent from the daemon back to a client.
@@ -63,6 +64,7 @@ pub enum Response {
         points: i64,
         softcore_points: i64,
     },
+    Controllers(Vec<ControllerInfo>),
 }
 
 /// A snapshot of what the daemon currently knows.
@@ -95,4 +97,22 @@ pub struct ProfileInfo {
     pub name: String,
     pub avatar_seed: String,
     pub ra_linked: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ControllerType {
+    Xbox,
+    Playstation,
+    Switch,
+    Generic,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ControllerInfo {
+    pub index: u32,
+    pub name: String,
+    pub controller_type: ControllerType,
+    pub vendor_id: Option<u16>,
+    pub product_id: Option<u16>,
 }
